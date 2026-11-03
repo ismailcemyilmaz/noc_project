@@ -1,0 +1,121 @@
+{
+ "maneuver.log": {
+  "bytes": 1116890,
+  "sha256": "0457b3c51a156ecc2996941c79224b335aa90eb42314a48fab28e7b1a8745039",
+  "rows": 7964,
+  "rows_dropped_col_mismatch": 0,
+  "columns": 25,
+  "ts_first": 1793701653.684706,
+  "ts_last": 1793701725.772286
+ },
+ "opti.log": {
+  "bytes": 866117,
+  "sha256": "c7c4f70a8398b38d1a27c2d5b5e88a0c9c347a1646f6017de2467faab9ed90cc",
+  "rows": 8070,
+  "rows_dropped_col_mismatch": 0,
+  "columns": 9,
+  "ts_first": 1793701651.045676,
+  "ts_last": 1793701731.735671
+ },
+ "phynt.log": {
+  "bytes": 75,
+  "sha256": "be175cb5452b28c37e6a36fe28c1ffc16aa9519e94f12f3f7edf5d7ab666b2ab",
+  "rows": 0,
+  "rows_dropped_col_mismatch": 0,
+  "columns": 22
+ },
+ "pom-measurements.log": {
+  "bytes": 11085896,
+  "sha256": "5a5a70db29f6a24579ed331c31a41ae8bce82590991748652ff62576d84ed77d",
+  "rows": 0,
+  "rows_dropped_col_mismatch": 40257,
+  "columns": 31
+ },
+ "pom.log": {
+  "bytes": 19324549,
+  "sha256": "f36a9f12a0d569e810ee4818bb88fd776a9b45f79988ab0e80ad4c7cdb29c94b",
+  "rows": 54028,
+  "rows_dropped_col_mismatch": 0,
+  "columns": 37,
+  "ts_first": 1793701651.036049,
+  "ts_last": 1793701731.735056
+ },
+ "rotorcraft.log": {
+  "bytes": 13758607,
+  "sha256": "a09b4c8c1d269866827b1bae8230afd470cca88afc481c52ef6cf05455d013b2",
+  "rows": 51220,
+  "rows_dropped_col_mismatch": 0,
+  "columns": 64,
+  "ts_first": 1793701651.041087,
+  "ts_last": 1793701731.73169
+ },
+ "simulation_data.npz": {
+  "bytes": 834182,
+  "sha256": "cce1863ff5fd67ed578da51217f79fee25d022bb345e7342df209522ad17a09e",
+  "arrays": {
+   "t": [
+    4000
+   ],
+   "pos": [
+    4000,
+    3
+   ],
+   "att": [
+    4000,
+    4
+   ],
+   "vel": [
+    4000,
+    3
+   ],
+   "avel": [
+    4000,
+    3
+   ],
+   "f_ext": [
+    4000,
+    3
+   ],
+   "tau_ext": [
+    4000,
+    3
+   ],
+   "pos_d": [
+    4000,
+    3
+   ],
+   "p_nom": [
+    4000,
+    3
+   ]
+  },
+  "all_zero_rows": {
+   "pos": 4000,
+   "att": 0,
+   "vel": 4000,
+   "avel": 4000,
+   "f_ext": 4000,
+   "tau_ext": 4000,
+   "pos_d": 3995,
+   "p_nom": 4000
+  }
+ },
+ "uavatt.log": {
+  "bytes": 11314105,
+  "sha256": "badd2ffac8a9282e7640bc89cc3dac4257ddfa5378ea2cdb6c3a687eab1dfb3d",
+  "rows": 58155,
+  "rows_dropped_col_mismatch": 0,
+  "columns": 23,
+  "ts_first": 1793701651.178179,
+  "ts_last": 1793701731.733229
+ },
+ "uavpos.log": {
+  "bytes": 12134423,
+  "sha256": "7dc22f0fd132d509e06d60b5e31e8f6573965e5584e83cfe9d98e920ee7893fd",
+  "rows": 57702,
+  "rows_dropped_col_mismatch": 0,
+  "columns": 29,
+  "ts_first": 1793701651.173563,
+  "ts_last": 1793701731.730103
+ }
+}
