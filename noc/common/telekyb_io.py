@@ -1,21 +1,26 @@
 """
 Readers for telekyb3 GenoM3 ports/services through genomix.
 
-Interface verified by noc/tests/t00_probe.py (logs/t00_probe.txt) and
-noc/docs/genom/phynt/README.adoc:
+Interface: pom.frame / phynt.desired / external_wrench / maneuver.desired verified
+live by noc/tests/t00_probe.py (logs/t00_probe.txt); get_reference and
+uavatt.wrench_measure taken from noc/docs/genom/{phynt,uavatt}/README.adoc and checked
+live by noc/tests/t00_check.py:
   pom.frame('robot')        -> {'frame': or_pose_estimator::state}
   phynt.desired()           -> {'desired': or_rigid_body::state}
-  phynt.reference()         -> {'reference': or_rigid_body::state}       (input port)
+  phynt.get_reference()     -> {'reference': or_rigid_body::state}       (attribute service)
   phynt.external_wrench()   -> {'external_wrench': or_wrench_estimator::state}
-  phynt.wrench_measure()    -> {'wrench_measure': or_wrench_estimator::state}  (input port)
+  uavatt.wrench_measure()   -> {'wrench_measure': or_wrench_estimator::state}  (uavatt OUTPUT port)
   maneuver.desired()        -> {'desired': or_rigid_body::state}; before any goto all
                                optional fields are None and ts = 0
   phynt.get_af_parameters() -> {'af': {...}};  get_wo_parameters() -> {'wo': {...}}
   phynt.log_info()          -> {'miss': .., 'total': ..}
   (phynt has no get_wo_data.)
+  Input ports (phynt.reference, phynt.wrench_measure, phynt.state) are NOT read:
+  genomix requires a 'path' argument for them (TypeError seen in t00_diag run 1).
 
 Rules:
-  * No exception is caught here. A failing genomix call propagates to the caller.
+  * Port readers (read_*) catch nothing: a failing genomix call propagates.
+    Only preflight() and phynt_snapshot() record exceptions instead of raising.
   * Optional fields that are None become NaN arrays AND a False entry in the
     returned ``valid`` dict. NaN is never silently replaced by 0.
   * A port timestamp of exactly 0 s 0 ns is reported as ``ts = nan`` with
@@ -99,8 +104,9 @@ def read_phynt_desired(phynt):
     return flatten(unwrap(phynt.desired(), 'desired'), RB_FIELDS)
 
 
-def read_phynt_reference(phynt):
-    return flatten(unwrap(phynt.reference(), 'reference'), RB_FIELDS)
+def read_phynt_get_reference(phynt):
+    """phynt attribute service get_reference (copy of the reference phynt uses)."""
+    return flatten(unwrap(phynt.get_reference(), 'reference'), RB_FIELDS)
 
 
 def read_maneuver_desired(maneuver):
@@ -111,8 +117,10 @@ def read_external_wrench(phynt):
     return flatten(unwrap(phynt.external_wrench(), 'external_wrench'), WRENCH_FIELDS)
 
 
-def read_wrench_measure(phynt):
-    return flatten(unwrap(phynt.wrench_measure(), 'wrench_measure'), WRENCH_FIELDS)
+def read_uavatt_wrench_measure(uavatt):
+    """uavatt OUTPUT port wrench_measure (wrench from propeller measurements +
+    geometric model); this is what 06a connects to phynt/wrench_measure."""
+    return flatten(unwrap(uavatt.wrench_measure(), 'wrench_measure'), WRENCH_FIELDS)
 
 
 def invalid_sample(fields):
@@ -122,26 +130,70 @@ def invalid_sample(fields):
     return out, {'ts': False, **{f: False for f in fields}}
 
 
-# name -> (reader, fields); used by recorders that log per-source errors
-SOURCES = {
-    'pom': (read_pom, STATE_FIELDS),
-    'phynt_ref': (read_phynt_reference, RB_FIELDS),
-    'phynt_des': (read_phynt_desired, RB_FIELDS),
-    'man_des': (read_maneuver_desired, RB_FIELDS),
-    'ext_wrench': (read_external_wrench, WRENCH_FIELDS),
-    'wrench_meas': (read_wrench_measure, WRENCH_FIELDS),
-}
+def reference_source(phynt):
+    """phynt.get_reference if the handle exposes it, else maneuver.desired
+    (which 06a wires to phynt/reference). Returns (component name, reader)."""
+    if hasattr(phynt, 'get_reference'):
+        return 'phynt', read_phynt_get_reference
+    return 'maneuver', read_maneuver_desired
+
+
+def build_sources(phynt):
+    """name -> (component name, reader, fields). Only output ports / attribute
+    services; input ports are never read from Python."""
+    ref_comp, ref_reader = reference_source(phynt)
+    return {
+        'pom': ('pom', read_pom, STATE_FIELDS),
+        'phynt_ref': (ref_comp, ref_reader, RB_FIELDS),
+        'phynt_des': ('phynt', read_phynt_desired, RB_FIELDS),
+        'man_des': ('maneuver', read_maneuver_desired, RB_FIELDS),
+        'ext_wrench': ('phynt', read_external_wrench, WRENCH_FIELDS),
+        'wrench_meas': ('uavatt', read_uavatt_wrench_measure, WRENCH_FIELDS),
+    }
+
+
+def describe_sources(sources):
+    return {k: f'{c}.{r.__name__}' for k, (c, r, _) in sources.items()}
+
+
+def preflight(components, sources):
+    """Read every source once. Never raises for a read failure: returns
+    {src: {'ok', 'reader', 'error', 'valid', 'raw'}} and prints failures."""
+    rep = {}
+    for src, (comp, reader, fields) in sources.items():
+        e = {'reader': f'{comp}.{reader.__name__}'}
+        try:
+            out, valid = reader(components[comp])
+            e.update(ok=True, error=None, valid=valid,
+                     values={k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in out.items()})
+        except Exception as ex:  # recorded and printed, not hidden
+            e.update(ok=False, error=f'{type(ex).__name__}: {ex}', valid=None, values=None)
+        rep[src] = e
+    bad = {k: v['error'] for k, v in rep.items() if not v['ok']}
+    print(f'[preflight] sources: {describe_sources(sources)}', flush=True)
+    for k, v in rep.items():
+        print(f'[preflight] {k:12s} {"OK  " if v["ok"] else "FAIL"} {v["reader"]} '
+              f'{v["valid"] if v["ok"] else v["error"]}', flush=True)
+    print(f'[preflight] {len(rep) - len(bad)}/{len(rep)} sources OK'
+          + (f'; FAILED: {sorted(bad)}' if bad else ''), flush=True)
+    return rep
 
 
 # ---------------------------------------------------------------- services
+SNAPSHOT_SERVICES = ('get_af_parameters', 'get_wo_parameters', 'get_body_parameters',
+                     'get_reference', 'log_info')
+
+
 def phynt_snapshot(phynt):
-    """Raw replies of the parameter/log services (JSON-serialisable dicts)."""
-    return {
-        'get_af_parameters': phynt.get_af_parameters(),
-        'get_wo_parameters': phynt.get_wo_parameters(),
-        'get_body_parameters': phynt.get_body_parameters(),
-        'log_info': phynt.log_info(),
-    }
+    """Call each parameter/log service independently. A failing call is
+    recorded as {'error': '<Type>: <msg>'} and does not stop the others."""
+    out = {}
+    for name in SNAPSHOT_SERVICES:
+        try:
+            out[name] = getattr(phynt, name)()
+        except Exception as ex:  # recorded, not hidden
+            out[name] = {'error': f'{type(ex).__name__}: {ex}'}
+    return out
 
 
 # ---------------------------------------------------------------- recorder

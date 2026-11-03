@@ -8,11 +8,16 @@ component logs to logs/noc/t00/ instead of overwriting logs/06a-.../gazebo/.
 
 Records at 50 Hz target (06a timing):
   wall/monotonic time, loop lateness, read duration,
-  pom frame (pos/att/vel/avel/acc), phynt reference, phynt desired,
-  maneuver desired, phynt external_wrench, phynt wrench_measure
+  pom frame (pos/att/vel/avel/acc), phynt reference (phynt.get_reference, else
+  maneuver.desired), phynt desired, maneuver desired, phynt external_wrench,
+  uavatt wrench_measure (output port)
   (+ port timestamps and per-field valid flags; None -> NaN + valid=False).
+Input ports are never read from Python (genomix needs a 'path' for them).
+Preflight: every source read once after start(), before the first goto;
+failures and exceptions are printed and saved to preflight.json (run continues).
 Snapshots of phynt get_af_parameters / get_wo_parameters / get_body_parameters /
-log_info (+ /tmp/phynt.log size) after start(), during steady contact and before stop().
+get_reference / log_info (+ /tmp/phynt.log size) after start(), during steady
+contact and before stop(); a failing service is recorded, never aborts the run.
 
 Errors: per-sample port read failures are recorded explicitly (columns
 '<src>.error' = exception text, values NaN, valid False; counts in meta.json) and
@@ -48,12 +53,16 @@ SNAPSHOT_TIMES = {'contact_1': 28.0, 'contact_2': 45.0}  # steady contact window
 PHYNT_TMP_LOG = '/tmp/phynt.log'
 
 
-def load_06a():
+def load_06a(out_dir=None):
     spec = importlib.util.spec_from_file_location('model_hexa_fa', MODEL_06A)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)          # connects genomix, loads components
-    mod.LOG_DIR = OUT_DIR                 # stop() copies logs here (06a file untouched)
+    mod.LOG_DIR = out_dir or OUT_DIR      # stop() copies logs here (06a file untouched)
     return mod
+
+
+def components(m):
+    return {'pom': m.pom, 'phynt': m.phynt, 'maneuver': m.maneuver, 'uavatt': m.uavatt}
 
 
 def file_size(path):
@@ -65,8 +74,8 @@ def git_rev():
     return r.stdout.strip() if r.returncode == 0 else f'unavailable: {r.stderr.strip()}'
 
 
-def jdump(obj, name):
-    with open(os.path.join(OUT_DIR, name), 'w') as f:
+def jdump(obj, name, out_dir=None):
+    with open(os.path.join(out_dir or OUT_DIR, name), 'w') as f:
         json.dump(obj, f, indent=1, default=str)
 
 
@@ -79,20 +88,16 @@ def snapshot(m, label, t_nom):
     return s
 
 
-SOURCE_COMPONENT = {'pom': 'pom', 'phynt_ref': 'phynt', 'phynt_des': 'phynt',
-                    'man_des': 'maneuver', 'ext_wrench': 'phynt', 'wrench_meas': 'phynt'}
-
-
-def read_all(m, err_counts):
+def read_all(comps, sources, err_counts):
     """Read every source. A read that raises is NOT hidden: its exception text is
     returned in ``errors[src]``, printed (first 5 per source), counted, and the
     sample is all-NaN with valid=False. The run continues so the failure pattern
     over time is recorded instead of aborting on the first error."""
     t0 = time.monotonic()
     row, errors = {}, {}
-    for src, (reader, fields) in io.SOURCES.items():
+    for src, (comp, reader, fields) in sources.items():
         try:
-            row[src] = reader(getattr(m, SOURCE_COMPONENT[src]))
+            row[src] = reader(comps[comp])
             errors[src] = ''
         except Exception as e:  # recorded, not swallowed
             row[src] = io.invalid_sample(fields)
@@ -106,12 +111,14 @@ def read_all(m, err_counts):
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     m = load_06a()
+    comps = components(m)
+    sources = io.build_sources(m.phynt)
     rec = io.Recorder()
     events, snaps = [], {}
     meta = dict(git_rev=git_rev(), model_06a=MODEL_06A, tf=TF, dt=DT, t_wo_zero=T_WO_ZERO,
                 waypoints=m.waypoints, snapshot_times=SNAPSHOT_TIMES, seed=None,
                 seed_note='no RNG in this script; simulator has no recorded seed',
-                started_unix=time.time())
+                sources=io.describe_sources(sources), started_unix=time.time())
     error = None
     err_counts = {}
 
@@ -126,15 +133,9 @@ def main():
         w0 = time.time(); m.setup(); ev('setup', -1.0, w0, time.time())
         w0 = time.time(); m.start(); ev('start', -1.0, w0, time.time())
 
-        # preflight: raw replies once, so the structure is on record
-        jdump({
-            'pom.frame(robot)': m.pom.frame('robot'),
-            'phynt.reference': m.phynt.reference(),
-            'phynt.desired': m.phynt.desired(),
-            'maneuver.desired': m.maneuver.desired(),
-            'phynt.external_wrench': m.phynt.external_wrench(),
-            'phynt.wrench_measure': m.phynt.wrench_measure(),
-        }, 'preflight.json')
+        # preflight: one read per source before the first goto (does not abort)
+        meta['preflight'] = io.preflight(comps, sources)
+        jdump(meta['preflight'], 'preflight.json')
         snaps['after_start'] = snapshot(m, 'after_start', 0.0)
 
         N = int(TF / DT)
@@ -157,7 +158,7 @@ def main():
                     del pending_snaps[lbl]
 
             t_wall = time.time()
-            row, errors, read_s = read_all(m, err_counts)
+            row, errors, read_s = read_all(comps, sources, err_counts)
             rec.add_scalar('i', i)
             rec.add_scalar('t_nominal', ts)
             rec.add_scalar('t_wall', t_wall)

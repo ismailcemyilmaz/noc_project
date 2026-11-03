@@ -57,5 +57,56 @@ class TestTelekybIO(unittest.TestCase):
         self.assertEqual(a['m.valid.pos'].tolist(), [False])
 
 
+def _input_port(*a):
+    raise TypeError("partial() missing 1 required positional argument: 'path'")
+
+
+WRENCH = {'wrench_measure': {'ts': {'sec': 2, 'nsec': 0}, 'intrinsic': 0,
+                             'force': {'x': 0.0, 'y': 0.0, 'z': 26.7}, 'force_cov': None,
+                             'torque': {'x': 0, 'y': 0, 'z': 0}, 'torque_cov': None}}
+
+
+class TestSourcesPreflightSnapshot(unittest.TestCase):
+    def comps(self, with_get_reference=True):
+        ph = Fake(desired=PHYNT_DES, reference=None, wrench_measure=None,
+                  external_wrench={'external_wrench': WRENCH['wrench_measure']},
+                  get_af_parameters={'af': {'K': [10] * 6}}, get_wo_parameters={'wo': {}},
+                  get_body_parameters={'body': {}}, log_info={'miss': 0, 'total': 0})
+        ph.reference = _input_port
+        ph.wrench_measure = _input_port
+        if with_get_reference:
+            ph.get_reference = lambda: {'reference': PHYNT_DES['desired']}
+        return {'pom': Fake(), 'phynt': ph, 'maneuver': Fake(desired=MAN_BEFORE_GOTO),
+                'uavatt': Fake(wrench_measure=WRENCH)}
+
+    def test_no_input_ports_and_sources(self):
+        c = self.comps()
+        c['pom'].frame = lambda port: {'frame': PHYNT_DES['desired']}
+        src = io.build_sources(c['phynt'])
+        self.assertEqual(io.describe_sources(src)['phynt_ref'], 'phynt.read_phynt_get_reference')
+        self.assertEqual(io.describe_sources(src)['wrench_meas'], 'uavatt.read_uavatt_wrench_measure')
+        rep = io.preflight(c, src)
+        self.assertTrue(all(v['ok'] for v in rep.values()), rep)
+
+    def test_reference_fallback(self):
+        c = self.comps(with_get_reference=False)
+        src = io.build_sources(c['phynt'])
+        self.assertEqual(io.describe_sources(src)['phynt_ref'], 'maneuver.read_maneuver_desired')
+
+    def test_preflight_records_failure(self):
+        c = self.comps()  # pom has no frame -> AttributeError
+        rep = io.preflight(c, io.build_sources(c['phynt']))
+        self.assertFalse(rep['pom']['ok'])
+        self.assertIn('AttributeError', rep['pom']['error'])
+        self.assertTrue(rep['wrench_meas']['ok'])
+
+    def test_snapshot_records_failure(self):
+        ph = self.comps()['phynt']
+        ph.log_info = _input_port
+        s = io.phynt_snapshot(ph)
+        self.assertIn('TypeError', s['log_info']['error'])
+        self.assertEqual(s['get_af_parameters'], {'af': {'K': [10] * 6}})
+
+
 if __name__ == '__main__':
     unittest.main()
