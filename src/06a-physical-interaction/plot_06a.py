@@ -15,13 +15,14 @@ import os
 import math
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PLOT_DIR = os.path.join(SCRIPT_DIR, 'plots_06a', 'gazebo')
-LOG_DIR = os.path.expanduser('~/tk3lab-ws/logs/06a-physical-interaction/gazebo')
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))  # noc-ws root
+PLOT_DIR = os.path.join(REPO_ROOT, 'noc', 'results', '06a_baseline')
+LOG_DIR = os.path.join(REPO_ROOT, 'logs', '06a-physical-interaction', 'gazebo')
 
 RAD2DEG = 180.0 / math.pi
 X_WALL = 2.0
 L_BAR = 0.6
-TIP_RADIUS = 0.05  # sphere collision radius — adds to effective EE reach
+TIP_RADIUS = 0.04  # sphere collision radius (matches mrsim-tilthex model.sdf ee-tip-col) — adds to effective EE reach
 L_EFF = L_BAR + TIP_RADIUS  # tip surface contacts wall, not tip center
 K_WALL = 500.0
 
