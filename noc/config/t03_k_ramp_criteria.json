@@ -1,0 +1,62 @@
+{
+ "_doc": "Gate A2 pass criteria for the t03 K_x ramp experiment. Written and committed BEFORE the t03 flight (2026-11-04) and before noc/analysis/a03_k_ramp.py; a03 reads every threshold from this file. Must not be edited after the flight. The t02 result (noc/results/02_live_k.md, Gate A FAILED) is not affected by this file.",
+ "experiment": {
+  "script": "noc/tests/t03_k_ramp.py",
+  "logs": "logs/noc/t03_k_ramp/",
+  "analysis": "noc/analysis/a03_k_ramp.py",
+  "report": "noc/results/03_k_ramp.md",
+  "base_config": "noc/config/af_on_baseline.json"
+ },
+ "scenario": {
+  "contact": "06a contact goto (BODY_X_CONTACT = 1.55, 0, 1), 2 s, at t = 22 s nominal; K phase starts at t = 30 s",
+  "K_x_sequence_N_per_m": [10.0, 20.0, 10.0],
+  "hold_s": 20.0,
+  "ramp_rate_N_per_m_per_s": 10.0,
+  "ramp_update": "one set_af_parameters call per 50 Hz cycle while K_x changes (0.2 N/m per call), each followed by get_af_parameters",
+  "fixed": "AF mass, B, J and K[1:] stay at the values read after setup (= af_on_baseline.json, B = 2*sqrt(M*K) with K_x = 10); B is NOT rescaled",
+  "pending_sources": ["phynt_des", "ext_wrench"],
+  "pending_rule": "before the first maneuver.goto these two sources are recorded as 'pending' (preflight and per cycle). After the first goto each must become ready (read without error, all fields valid, ts newer than the last ts seen before the goto) within pending_timeout_s, otherwise the experiment aborts (retreat, land, stop).",
+  "pending_timeout_s": 2.0
+ },
+ "definitions": {
+  "sample": "one row of uavpos.log (component log, ~0.75-1 kHz)",
+  "fx": "uavpos.log column fx [N] (controller force command; an estimate, not a contact-force measurement)",
+  "xd": "uavpos.log column xd [m] (AF-filtered position reference received by uavpos)",
+  "ramp_window": "for each ramp: [t_wall of its first set_af_parameters call, t_wall of its last call + dt (0.02 s)]",
+  "K_phase": "[wall time of the first K_x = 10 hold start (t = 30 s nominal), wall time of the end of the last hold (retreat goto)]",
+  "steady": "last steady_frac of each hold (hold = 20 s, so the last 10 s)",
+  "steady_frac": 0.5
+ },
+ "criteria": {
+  "C1_no_abort_no_read_error": {
+   "rule": "meta.abort is null AND meta.error is null AND sum(meta.read_error_counts) == 0",
+   "note": "read_error_counts excludes read errors of phynt_des / ext_wrench while those sources are pending (before they become ready after the first goto); those are counted separately in meta.read_error_counts_pending and reported, not gated. Any other read error, at any time, fails C1."
+  },
+  "C2_applied_K_every_cycle": {
+   "rule": "every recorded cycle has a valid get_af_parameters read and |af.K_x - k_target_x| <= atol, AND every set_af_parameters call verified (full mass, B, K, J read-back)",
+   "atol_N_per_m": 1e-09
+  },
+  "C3_ramp_max_abs_dfx": {
+   "rule": "for every ramp_window: max over consecutive samples |fx[i+1] - fx[i]| <= max_N",
+   "max_N": 0.064,
+   "source_of_threshold": "t02: max per-row |dfx| over 20 call-free 2 s windows inside the steady holds (noc/results/02_live_k.md section 2)"
+  },
+  "C4_max_abs_dxd": {
+   "rule": "over the K_phase: max over consecutive samples |xd[i+1] - xd[i]| <= max_m",
+   "max_m": 0.001
+  },
+  "C5_steady_F_vs_series_model": {
+   "rule": "for every hold: |mean(fx over steady) - F_pred| / F_pred <= tol",
+   "F_pred": "d0 / (1/Kpxy + 1/K_x)",
+   "d0_m": 0.184,
+   "d0_source": "t01 measured (noc/results/01_af_on.md section 4), same value as a02 D0_GIVEN",
+   "Kpxy": 5.0,
+   "tol": 0.15
+  }
+ },
+ "gate_A2": "PASSED iff C1..C5 all hold; otherwise FAILED",
+ "reported_not_gated": {
+  "settling_2sigma": "AF deviation dev = xd - maneuver x, centered moving average 0.5 s. For each hold: sigma = std of the moving-averaged dev over its steady part, band = steady mean +/- 2 sigma. Settling time = time from the end of the preceding K change (last ramp call for t03, the set call for t02 steps, the end of the contact goto for the first hold) until the moving-averaged dev enters the band and stays inside it until the hold ends; null if it never does. Computed the same way for t02 steps and t03 ramps.",
+  "comparison_with_t02": "steady F, AF deviation, |WO efx| per K_x value; max |dfx| and |dxd| at each K change (t02 step windows +/- 1 s, t03 ramp windows); settling_2sigma"
+ }
+}
