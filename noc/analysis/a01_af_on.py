@@ -133,6 +133,57 @@ def analyse(name, log_dir, npz_name):
             S['k_eff_measured'] = S['F_quasistatic_N']['mean'] / S['d0_measured_m']['mean']
     R['steady'] = S
 
+    # per steady window: AF deviation (mean, last 0.5 s), WO f_ext_x from phynt.log, F/K_af
+    ph = L.get('phynt')
+    have_ph = ph is not None and ph.n > 0
+    tph = ph['ts'] - T0 if have_ph else None
+    win = []
+    for a, b in steady_ws:
+        m = (tu >= a) & (tu <= b)
+        late = (tu >= b - 0.5) & (tu <= b)
+        e = dict(window=[a, b], dev_mean_m=float(dev[m].mean()), dev_last05_m=float(dev[late].mean()),
+                 fx_mean_N=float(up['fx'][m].mean()))
+        if have_ph:
+            mp = (tph >= a) & (tph <= b)
+            e['wo_efx_mean_N'] = float(ph['efx'][mp].mean())
+            if kaf:
+                e['wo_efx_over_Kaf_m'] = e['wo_efx_mean_N'] / kaf
+        win.append(e)
+    R['steady_windows_detail'] = win
+
+    # [COMPUTED] AF model driven by the logged WO force: m d'' + B d' + K d = efx
+    if have_ph and kaf:
+        af = None
+        for s_ in snaps.values():
+            g = s_.get('get_af_parameters')
+            if isinstance(g, dict) and 'af' in g:
+                af = g['af']; break
+        m_af, B_af = float(af['mass']), float(af['B'][0])
+        o = np.argsort(tph)
+        tt, ff = tph[o], ph['efx'][o]
+        dsim = np.zeros_like(tt); x = v = 0.0
+        for i in range(1, len(tt)):
+            dt = tt[i] - tt[i - 1]
+            if 0 < dt <= 0.1:
+                acc = (ff[i - 1] - B_af * v - kaf * x) / m_af
+                v += acc * dt; x += v * dt
+            dsim[i] = x
+        ds = np.interp(tu, tt, dsim)
+        tk = in_windows(tu, task_segs)
+        R['af_model_check'] = dict(
+            model='m d\'\' + B d\' + K d = efx(phynt.log), explicit Euler on phynt.log ts',
+            mass=m_af, B=B_af, K=kaf,
+            rms_log_minus_sim_contact_m=float(np.sqrt(np.mean((dev[tk] - ds[tk]) ** 2))),
+            corr_contact=float(np.corrcoef(dev[tk], ds[tk])[0, 1]),
+            per_window=[dict(window=w_['window'], sim_mean_m=float(ds[in_windows(tu, [tuple(w_['window'])])].mean()),
+                             log_mean_m=w_['dev_mean_m']) for w_ in win])
+        R['wo_noise'] = dict(efx_free_flight_12_20s=stats(ph['efx'][(tph > 12) & (tph < 20)]),
+                             efx_after_zero_22p7_24p5s=stats(ph['efx'][(tph > 22.7) & (tph < 24.5)]))
+    dtw = np.diff(d['t_wall'])
+    R['python_loop'] = dict(dt_ms=stats(dtw * 1e3), dt_p99_ms=float(np.percentile(dtw, 99) * 1e3),
+                            n_dt_gt_100ms=int((dtw > 0.1).sum()), late_max_s=float(d['late_s'].max()),
+                            goto_blocked_s=[e['blocked_s'] for e in events if e['name'].startswith('maneuver.goto')])
+
     # 4) vel/pos fields of reference ports
     V = {}
     for src in ('man_des', 'phynt_ref', 'phynt_des'):
