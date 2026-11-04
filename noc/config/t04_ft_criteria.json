@@ -1,0 +1,79 @@
+{
+ "_doc": "Gate B1 pass criteria for t04 (Gazebo force_torque sensor on ee_joint). Written and committed BEFORE the t04 implementation and flight (2026-11-04); a04 reads every threshold from this file. Must not be edited after the flight. Plan: noc/config/t04_ft_plan.md.",
+ "experiment": {
+  "script": "noc/tests/t04_ft_check.py",
+  "logs": "logs/noc/t04_ft_check/",
+  "ft_log": "logs/noc/t04_ft_check/ft.log (noc/experiments/log_ft.sh, one line per message: host receive time, TAB, gz.msgs.Wrench JSON)",
+  "analysis": "noc/analysis/a04_ft_check.py",
+  "report": "noc/results/04_ft_check.md",
+  "model": "gazebo/models/noc-tilthex/model.sdf",
+  "world": "gazebo/worlds/noc-wall-world.world",
+  "base_config": "noc/config/af_on_baseline.json"
+ },
+ "sensor": {
+  "joint": "ee_joint (fixed, parent base, child ee)",
+  "type": "force_torque",
+  "frame": "child",
+  "measure_direction": "child_to_parent",
+  "update_rate_hz": 500,
+  "topic": "/noc/ee_ft",
+  "ee_mass_kg": 0.01
+ },
+ "windows_nominal_s": {
+  "FREE1": [26.0, 34.0],
+  "CONTACT": [44.0, 54.0],
+  "FREE2": [60.0, 68.0],
+  "flight_span": "first goto to the land goto (2 s .. 68 s nominal)",
+  "note": "wall-clock bounds come from the events t04 records at these nominal times"
+ },
+ "definitions": {
+  "Fn": "normal force = world-x component of the F/T force; body (= ee child frame) to world rotation from pom attitude interpolated at the F/T sample time; F/T sample time on the wall clock = header stamp mapped with the rolling lower envelope of (host receive time - header stamp) over 2 s",
+  "bias": "mean of Fn over FREE1",
+  "Fn_corrected": "Fn - bias",
+  "free_std": "sample standard deviation of Fn over FREE1",
+  "delta_pre": "mean(Fn over CONTACT) - mean(Fn over FREE1)",
+  "delta_post": "mean(Fn over CONTACT) - mean(Fn over FREE2)",
+  "expected_sign": "Fn_corrected in contact < 0 (wall pushes the tip in -x; child_to_parent = force of ee on base); reported, the gate uses magnitudes and consistency only"
+ },
+ "criteria": {
+  "C1_recording_and_chain_error_free": {
+   "rule": "ft.log exists, >= 1 message, 0 unparsable lines, logger alive until t04 stopped it; AND meta.abort is null AND meta.error is null AND sum(meta.read_error_counts) == 0 (pending-phase errors of phynt_des / ext_wrench excluded as in t03)"
+  },
+  "C2_timestamps_continuous_and_fast": {
+   "rule": "over flight_span: header stamps strictly increasing; max consecutive header-stamp gap <= max_gap_s; mean rate (N-1)/(t_last-t_first) > min_rate_hz both on header stamps and on host receive times",
+   "max_gap_s": 0.05,
+   "min_rate_hz": 100.0
+  },
+  "C3_bias_measured_in_free_flight": {
+   "rule": "FREE1 holds >= min_samples F/T samples with finite mean and std, AND the tip is free during FREE1: tip surface x (pom position + R * tip centre + radius) <= x_wall - free_margin_m for every pom sample in FREE1",
+   "min_samples": 500,
+   "x_wall_m": 2.0,
+   "tip_center_body_m": [0.6, 0.0, -0.125],
+   "tip_radius_m": 0.04,
+   "free_margin_m": 0.05
+  },
+  "C4_contact_force_above_noise": {
+   "rule": "abs(mean(Fn_corrected over CONTACT)) > factor * free_std",
+   "factor": 5.0
+  },
+  "C5_pre_post_consistent": {
+   "rule": "sign(delta_pre) == sign(delta_post) AND ratio_min <= delta_pre / delta_post <= ratio_max",
+   "ratio_min": 0.3333333333333333,
+   "ratio_max": 3.0,
+   "note": "same order of magnitude interpreted as within a factor of 3"
+  },
+  "C6_rotor_safety_and_K_as_t02_t03": {
+   "rule": "meta.safety_version == 2 AND meta.safety equals noc.common.flight.SAFETY AND no safety trip (meta.abort null) AND initial AF equals af_on_baseline.json AND every cycle has a valid get_af_parameters read equal to the baseline (mass, K, B, J; atol 1e-9) AND no set_af_parameters call is made",
+   "atol": 1e-09
+  }
+ },
+ "gate_B1": "PASSED iff C1..C6 all hold; otherwise FAILED",
+ "reported_not_gated": {
+  "lag": "cross-correlation lag of Fn_corrected against WO efx (phynt.log) and against -uavpos fx, on a 100 Hz wall-clock grid over [contact goto - 2 s, retreat goto + 5 s], search +/- 1 s; positive = the estimate lags the F/T",
+  "rmse": "RMSE of WO efx and of -fx against Fn_corrected after lag compensation, over the same span and over CONTACT",
+  "bias": "F/T force and torque means and std over FREE1 and FREE2 (child frame), Fn bias",
+  "rtf": "real-time factor = header-stamp span / host-time span",
+  "check_mode_weight": "--check: on the ground, mean F/T force norm vs m_ee * g = 0.098 N (+/- 20 %)",
+  "independence": "F/T = physics-engine constraint wrench at ee_joint; it uses no output of the WO/AF/controller chain. WO efx = model-based estimate from rotor speeds and pom state; uavpos fx = controller command. All three respond to the same simulated contact, so they are not independent in time; F/T differs from the wall contact force by m_ee*(a - g) and friction terms."
+ }
+}
