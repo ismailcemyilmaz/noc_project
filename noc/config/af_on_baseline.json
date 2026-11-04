@@ -1,0 +1,51 @@
+{
+ "_doc": "AF-on reference configuration (decision P4, 2026-11-04). Controller/AF/WO values are those set by src/06a-physical-interaction/model_hexa_fa.py setup() (unchanged) plus the rotor_measure fix; checked against that file by noc/tests/test_config.py and against the live phynt snapshots of the reference run. Physical parameters stay in noc/common/params.py.",
+ "reference_run": {
+  "script": "noc/tests/t01_af_on.py",
+  "logs": "logs/noc/t01_af_on/",
+  "npz_sha256": "79fe6b91e216a937ae1351f2e29200e572ee980ad81b8a733ef08f2c843975b1",
+  "report": "noc/results/01_af_on.md",
+  "git_rev_at_run": "0e9a210",
+  "safety_version_at_run": 1,
+  "seed": null,
+  "seed_note": "no RNG in scripts; simulator seed not recorded"
+ },
+ "setup": {
+  "function": "noc.common.setup_06a.setup",
+  "extra_connection": {"component": "uavatt", "local": "rotor_measure", "remote": "rotorcraft/rotor_measure"},
+  "goto_mode": "ack=True (noc.common.flight.goto)"
+ },
+ "uavpos": {
+  "source": "06a setup() uavpos.set_servo_gain / set_saturation",
+  "Kpxy": 5.0, "Kpz": 25.0, "Kvxy": 7.0, "Kvz": 18.0, "Kixy": 0.0, "Kiz": 1.0,
+  "sat": {"x": 3.0, "v": 3.0, "ix": 0.5},
+  "force_law_verified": "steady contact fx = -Kpxy*e_x - Kvxy*e_vx (residual 2e-6 N), noc/results/00b_diagnosis.md Q4"
+ },
+ "uavatt": {
+  "source": "06a setup() uavatt.set_servo_gain / set_wlimit",
+  "Kqxy": 4.0, "Kqz": 3.0, "Kwxy": 0.8, "Kwz": 0.8, "wmin": 16.0, "wmax": 100.0
+ },
+ "phynt_af": {
+  "source": "06a setup() phynt.set_af_parameters; matches get_af_parameters snapshots of the reference run",
+  "mass": 5.0,
+  "K": [10.0, 100.0, 100.0, 50.0, 50.0, 50.0],
+  "B_rule": "B_i = 2*sqrt(mass*K_i) (critical damping)",
+  "J": [0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.05]
+ },
+ "phynt_wo": {
+  "source": "06a setup() phynt.set_wo_gains / set_wo_fc; set_wo_zero(duration=2.0) at t=20 s",
+  "K": [1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+  "fc": [20.0, 20.0, 20.0, 1.0, 1.0, 1.0],
+  "zero_at_s": 20.0, "zero_duration_s": 2.0
+ },
+ "scenario": {
+  "source": "06a waypoints; BODY_X_CONTACT = X_WALL - L_BAR + 0.15",
+  "BODY_X_CONTACT": 1.55,
+  "tf_s": 80.0, "dt_s": 0.02
+ },
+ "reference_results_steady_contact": {
+  "_tag": "COMPUTED/LOG estimates, not contact-force measurements",
+  "F_quasistatic_N": 0.622, "wo_f_ext_x_N": -0.606, "af_dev_x_m": -0.055,
+  "k_eff_N_per_m": 3.38, "k_series_model_N_per_m": 3.33
+ }
+}

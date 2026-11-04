@@ -68,6 +68,17 @@ class TestSafety(unittest.TestCase):
             trips, sig = s.check(self._row(m), True, seg)
         self.assertTrue(any('external_wrench' in t for t in trips), trips)
 
+    def test_f_ext_ignored_on_ground_p3(self):
+        m = make_module()
+        m.world.pos = np.array([0.14, 0.0, 0.237])   # t01 landing trip state
+        m.world.f_ext = np.array([0.0, 0.0, 5.0])
+        s = T.Safety(T.SAFETY)
+        seg = (m.world.pos.copy(), np.array([0.0, 0.0, 0.0]))
+        for _ in range(20):
+            trips, sig = s.check(self._row(m), True, seg)
+        self.assertEqual(trips, [])
+        self.assertTrue(np.isnan(sig['f_ext']))
+
     def test_rotor_low_only_when_flying(self):
         m = make_module()
         m.world.rotor_vel = [10.0] * 6

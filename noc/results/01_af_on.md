@@ -176,7 +176,15 @@ Sonuçlar:
 
 ---
 
-## Kalıcı hale getirme seçenekleri (UYGULANMADI, onayını bekliyor)
+## Kalıcı hale getirme (2026-11-04: P1–P4 onaylandı ve uygulandı)
+
+- P1, P2: `noc/common/flight.py` (setup_06a varsayılanı, `flight.goto` ack=True). `t01_af_on.py` bu modülü kullanıyor.
+- P3: `flight.Safety` sürüm 2. WO kuvvet kontrolü yalnızca uçarken (z > 0.5 m) aktif. Test: `noc/tests/test_t01.py::test_f_ext_ignored_on_ground_p3`.
+  Kayıtlı t01 koşusu sürüm 1 ile yapıldı.
+- P4: `noc/config/af_on_baseline.json` (referans koşu t01, npz sha256 dahil). `noc/tests/test_config.py` bu dosyayı 06a kaynağıyla karşılaştırıyor. t01 snapshot'larıyla da elle kontrol edildi: AF K/mass/J/B ve WO K/fc eşleşiyor.
+- CLAUDE.md kuralları ve bilinen tutarsızlıklar güncellendi.
+
+Onaydan önceki seçenek listesi:
 
 1. **P1:** `noc/common/setup_06a.py`'yi (rotor_measure bağlantısı) bundan sonraki tüm noc deneylerinin varsayılan setup'ı yapmak. `src/06a` dokunulmadan kalır.
 2. **P2:** `ack=True` goto'yu noc deney akışlarında varsayılan yapmak.

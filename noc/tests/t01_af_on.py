@@ -9,8 +9,10 @@ Differences to t00_diag:
     50 Hz loop keeps sampling during motion; waypoint times are those of 06a.
   * extra sources: uavpos uav_input (thrust = force command), rotorcraft rotor_measure
     (propeller velocities); per sample /tmp/phynt.log size.
-  * safety monitor (SAFETY below). On a trip: retreat away from the wall, descend,
-    then stop(). The trip reason and signals are saved in meta.json.
+  * safety monitor (noc.common.flight.SAFETY). On a trip: retreat away from the
+    wall, descend, then stop(). The trip reason and signals are saved in meta.json.
+    The recorded t01 run (2026-11-04 17:21) used safety version 1; this code is
+    version 2 (external-wrench check only while flying, decision P3).
 
 Run inside the container (T2), after simulation.sh is up and Gazebo Play pressed:
   check only, no flight:  cd /shared-workspace && python3 -m noc.tests.t01_af_on --check
@@ -30,7 +32,9 @@ import numpy as np
 
 from noc.common import setup_06a
 from noc.common import telekyb_io as io
-from noc.tests.t00_diag import read_all, jdump, file_size, git_rev, snapshot, PHYNT_TMP_LOG
+from noc.common import flight
+from noc.common.flight import (SAFETY, Safety, seg_dist, components, all_sources, read_all,
+                               jdump, file_size, git_rev, snapshot, make_ev, retreat, PHYNT_TMP_LOG)
 
 REPO = setup_06a.REPO
 OUT_DIR = os.path.join(REPO, 'logs', 'noc', 't01_af_on')
@@ -40,98 +44,6 @@ TF = 80.0
 DT = 0.02
 T_WO_ZERO = 20.0
 SNAPSHOT_TIMES = {'contact_1': 28.0, 'contact_2': 45.0}
-
-SAFETY = dict(
-    f_max=3.5,         # N: |external_wrench force| (after set_wo_zero) or |uavpos thrust xy|
-    f_persist=5,       # consecutive 50 Hz samples (0.1 s)
-    e_max=0.40,        # m: distance of pom position from current waypoint segment (t00 max |e| 0.22)
-    e_persist=10,      # 0.2 s
-    w_hi=98.0,         # rotor velocity, uavatt wlimit units (wmax 100; t00 measured peak 95.6)
-    w_lo=18.0,         # while flying (wmin 16; t00 flying min 22.4)
-    w_persist=3,
-    z_fly=0.5,         # m: "flying" for the e and w_lo checks
-    retreat_dx=0.5,    # m away from the wall (-x)
-    retreat_s=3.0,
-    land_s=5.0,
-)
-
-
-def components(m):
-    return {'pom': m.pom, 'phynt': m.phynt, 'maneuver': m.maneuver, 'uavatt': m.uavatt,
-            'uavpos': m.uavpos, 'rotorcraft': m.rotorcraft}
-
-
-def all_sources(phynt):
-    s = io.build_sources(phynt)
-    s.update(io.EXTRA_SOURCES)
-    return s
-
-
-def seg_dist(p, a, b):
-    """Distance of point p from segment a-b (3D)."""
-    ab = b - a
-    L2 = float(ab @ ab)
-    u = 0.0 if L2 == 0 else min(max(float((p - a) @ ab) / L2, 0.0), 1.0)
-    return float(np.linalg.norm(p - (a + u * ab)))
-
-
-class Safety:
-    def __init__(self, cfg):
-        self.cfg = cfg
-        self.cnt = {'f_ext': 0, 'f_cmd': 0, 'e_seg': 0, 'w_hi': 0, 'w_lo': 0}
-
-    def _tick(self, key, cond, n):
-        self.cnt[key] = self.cnt[key] + 1 if cond else 0
-        return self.cnt[key] >= n
-
-    def check(self, row, wo_calibrated, seg):
-        c = self.cfg
-        pom_o, _ = row['pom']
-        p = pom_o['pos']
-        fe, fe_v = row['ext_wrench']
-        ui, ui_v = row['uav_input']
-        rm, rm_v = row['rotor_meas']
-        flying = bool(np.isfinite(p[2]) and p[2] > c['z_fly'])
-        sig = dict(
-            f_ext=float(np.linalg.norm(fe['force'])) if (fe_v['force'] and wo_calibrated) else math.nan,
-            f_cmd_xy=float(np.hypot(*ui['thrust'][:2])) if ui_v['thrust'] else math.nan,
-            e_seg=seg_dist(p, *seg) if (flying and np.all(np.isfinite(p))) else math.nan,
-            w_max=float(np.nanmax(rm['velocity'])) if rm_v['velocity'] else math.nan,
-            w_min=float(np.nanmin(rm['velocity'])) if rm_v['velocity'] else math.nan,
-            flying=flying,
-        )
-        trips = []
-        if self._tick('f_ext', sig['f_ext'] > c['f_max'], c['f_persist']):
-            trips.append(f"external_wrench |f|={sig['f_ext']:.2f} N > {c['f_max']}")
-        if self._tick('f_cmd', sig['f_cmd_xy'] > c['f_max'], c['f_persist']):
-            trips.append(f"uavpos |thrust_xy|={sig['f_cmd_xy']:.2f} N > {c['f_max']}")
-        if self._tick('e_seg', sig['e_seg'] > c['e_max'], c['e_persist']):
-            trips.append(f"segment error {sig['e_seg']:.3f} m > {c['e_max']}")
-        if self._tick('w_hi', sig['w_max'] > c['w_hi'], c['w_persist']):
-            trips.append(f"rotor velocity {sig['w_max']:.1f} > {c['w_hi']}")
-        if self._tick('w_lo', flying and sig['w_min'] < c['w_lo'], c['w_persist']):
-            trips.append(f"rotor velocity {sig['w_min']:.1f} < {c['w_lo']} while flying")
-        return trips, sig
-
-
-def retreat(m, ev, t_nom):
-    """Blocking: move away from the wall, then descend. stop() is called by the caller."""
-    p = io.read_pom(m.pom)[0]['pos']
-    xr = float(p[0] - SAFETY['retreat_dx']) if p[0] > 1.0 else float(p[0])
-    args = (xr, float(p[1]), float(p[2]), 0, SAFETY['retreat_s'])
-    w0 = time.time(); m.maneuver.goto(*args); ev('SAFETY retreat goto', t_nom, w0, time.time(), list(args))
-    args = (xr, float(p[1]), 0.0, 0, SAFETY['land_s'])
-    w0 = time.time(); m.maneuver.goto(*args); ev('SAFETY land goto', t_nom, w0, time.time(), list(args))
-
-
-def make_ev(events):
-    def ev(name, t_nom, w0, w1, extra=None):
-        e = dict(name=name, t_nominal=t_nom, wall_start=w0, wall_end=w1, blocked_s=w1 - w0)
-        if extra is not None:
-            e['args'] = extra
-        events.append(e)
-        print(f'[t={t_nom:5.2f}] {name} blocked {w1 - w0:.3f}s {"" if extra is None else extra}', flush=True)
-    return ev
 
 
 def run_check(load=setup_06a.load_06a):
@@ -171,7 +83,8 @@ def run_flight(load=setup_06a.load_06a):
     safety = Safety(SAFETY)
     meta = dict(git_rev=git_rev(), model_06a=setup_06a.MODEL_06A, tf=TF, dt=DT, t_wo_zero=T_WO_ZERO,
                 waypoints=m.waypoints, snapshot_times=SNAPSHOT_TIMES, safety=SAFETY,
-                sources=io.describe_sources(sources), goto_mode='ack=True', seed=None,
+                sources=io.describe_sources(sources), goto_mode='ack=True',
+                safety_version=flight.SAFETY_VERSION, seed=None,
                 seed_note='no RNG in this script; simulator has no recorded seed',
                 started_unix=time.time(), abort=None)
     error = None
@@ -197,7 +110,7 @@ def run_flight(load=setup_06a.load_06a):
                 wo_done = True
             if wp_idx < len(m.waypoints) and ts >= m.waypoints[wp_idx][0]:
                 args = m.waypoints[wp_idx][1]
-                w0 = time.time(); r = m.maneuver.goto(*args, ack=True)
+                w0 = time.time(); r = flight.goto(m, args)
                 ev('maneuver.goto(ack)', ts, w0, time.time(), {'args': list(args), 'reply': repr(r)[:200]})
                 seg = (seg[1], np.array(args[:3], float))
                 wp_idx += 1
