@@ -45,7 +45,7 @@ Ek bulgular (aşağıda ayrıntılı):
   - `wrench_measure`: "the current wrench exerted by the UAV according to the **propeller measurements** and the geometric model".
   - main task `rotor_measure` (in, `or_rotorcraft::output`) portunu okuyor.
 - 06a `setup()` uavatt için yalnızca `state` ve `uav_input` portlarını bağlıyor. **`rotor_measure` bağlı değil.**
-  - Lab'ın diğer script'leri aynı tipteki portu `rotorcraft/rotor_measure`'a bağlıyor: `src/01-intro/tk3-hexarotor-fa-control.py:70`, `src/04-state-estimation/state_estimation.py:125`.
+  - Lab'ın diğer script'leri aynı tipteki portu `rotorcraft/rotor_measure`'a bağlıyor: `src/01-intro/tk3-hexarotor-fa-control.py:70`, `src/04-state-estimation/state_estimation.py:125`. (Bu iki dosya physical-interaction sadeleştirmesinde ağaçtan kaldırıldı: `git show b39a541:<yol>`.)
 - Çıkarım zinciri (son halkası doğrulanmadı):
   1. rotor_measure bağlı değil,
   2. → uavatt wrench_measure.force = None,

@@ -3,7 +3,8 @@ Single source of physical parameters for the TiltHex (mrsim-tilthex) + wall setu
 
 Every value carries its source. "SDF" = gazebo/models/mrsim-tilthex/model.sdf,
 "WORLD" = gazebo/worlds/hexa-fa-wall-world.world, "06a" = src/06a-physical-interaction/model_hexa_fa.py,
-"05b" = src/05b-motion-control/model_hexa_fa.py.
+"05b" = src/05b-motion-control/model_hexa_fa.py, removed from the tree in the
+physical-interaction cleanup; read it with `git show b39a541:src/05b-motion-control/model_hexa_fa.py`.
 
 Values marked ASSUMPTION are not read directly from a simulator file.
 """
@@ -19,7 +20,8 @@ G_ACC = 9.81  # WORLD <gravity>0 0 -9.81</gravity>
 #  Mass / inertia
 # ---------------------------------------------------------------------------
 MASS_BASE = 2.3          # SDF base link <mass>; also 05b MASS
-MASS_ROTOR = 0.07        # mrsim-rotor model.sdf <mass> (copy outside this repo; README 6a)
+MASS_ROTOR = 0.07        # mrsim-rotor model.sdf <mass> (tk3lab image, /opt/openrobots; not in this repo);
+                         # consistent with 06a MASS = 2.72 = 2.3 + 6 x 0.07 (README@b39a541, section 6a)
 N_ROTORS = 6             # SDF: rotor-1..rotor-6
 MASS = MASS_BASE + N_ROTORS * MASS_ROTOR  # = 2.72 kg, 06a MASS (Gazebo total)
 

@@ -3,7 +3,9 @@
 ## Project
 - Goal: variable impedance control for the fully-actuated TiltHex in contact with a wall.
 - Optimization objective is NOT fixed yet. Current phase: measurement + infrastructure.
-- Base: telekyb3 lab repo (`src/`, `gazebo/`). Lab assignment 06a is the baseline.
+- Base: telekyb3 lab repo, reduced to physical interaction: `src/06a-physical-interaction/`,
+  `gazebo/models/mrsim-tilthex`, `gazebo/worlds/hexa-fa-wall-world.world`. Lab assignment 06a is the baseline.
+  Labs 01–05b were removed from the tree; read them with `git show b39a541:<path>`.
 
 ## Paths
 - Host: `~/noc-ws`  ↔  container: `/shared-workspace` (same directory, bind-mounted).
@@ -27,7 +29,7 @@
   `phynt.reference` need a path argument; use `noc/common/telekyb_io.py`.
 
 ## Known inconsistencies
-- Mass: 05b uses 2.3 kg (base only); 06a uses 2.72 kg (base + 6 × 0.07 kg rotors).
+- Mass: 05b (`git show b39a541:src/05b-motion-control/model_hexa_fa.py`) uses 2.3 kg (base only); 06a uses 2.72 kg (base + 6 × 0.07 kg rotors).
 - Tip radius: SDF 0.04 m; plot_06a.py used 0.05 m (now fixed to 0.04).
 - plot_06a.py does NOT measure contact force: it computes K_WALL × penetration (idealised spring).
 - Tip centre in SDF is at body `[0.6, 0, -0.125]`; plot_06a.py EE kinematics ignore the z offset.

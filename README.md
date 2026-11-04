@@ -1,30 +1,42 @@
-# Aerial Robotics Laboratory
+# NOC - Variable impedance control of a TiltHex in contact with a wall
 
-> **Course:** Advanced Topics in Automation and Control Engineering - *Aerial Robotics* <br>
-> **Institution:** Politecnico di Milano, 2025–26 <br>
+> Built on the *Aerial Robotics Laboratory* of the course *Advanced Topics in Automation and Control
+> Engineering* (Politecnico di Milano, 2025–26). <br>
 > **Lecturers:** Dr. Marco Tognon, Dr. Gianluca Corsini - *RAINBOW Team, Inria / IRISA / Université de Rennes*
 
-This repository contains my implementations for the 6 lab assignments that make up the Aerial Robotics
-Laboratory module of the *Advanced Topics in Automation and Control Engineering* course. Each assignment
-explores a different layer of an aerial robot's software stack - from rigid-body modelling and trajectory
-generation, through state estimation and motion control, all the way to physical interaction with the
-environment via an admittance filter and a wrench observer.
+**Goal.** Variable impedance control for the fully-actuated tilted hexarotor (TiltHex) while its
+end-effector is in contact with a wall. The starting point is lab assignment 6a (physical interaction:
+`phynt-genom3` admittance filter + wrench observer, Gazebo wall world).
+
+**Current status (2026-11-04): measurement and infrastructure phase.** The optimisation objective is not
+fixed yet. What exists today:
+
+- a diagnosis of the unmodified 6a pipeline (`noc/results/00b_diagnosis.md`);
+- a verified AF-on reference run, t01 (`noc/results/01_af_on.md`, config `noc/config/af_on_baseline.json`);
+- a reusable, tested flight path in `noc/` (setup fix, non-blocking goto, safety monitor, output-port
+  readers, log analysis).
+
+No variable impedance controller exists yet. The original 6a work is kept unmodified in
+`src/06a-physical-interaction/`. Labs 1–5b were removed from the tree; they are in git history
+(`git show b39a541:src/<lab>/...`).
 
 The work is built on top of the [**`telekyb3`**](https://git.openrobots.org/projects/telekyb3) framework, an
 open-source collection of GenoM3 components for multi-rotor UAVs developed by **LAAS-CNRS, IRISA-Inria,
 University of Twente** and **University College London**. All control / estimation / interaction
-components used here (`uavpos-genom3`, `uavatt-genom3`, `nhfc-genom3`, `pom-genom3`, `optitrack-genom3`,
+components used here (`uavpos-genom3`, `uavatt-genom3`, `pom-genom3`, `optitrack-genom3`,
 `rotorcraft-genom3`, `maneuver-genom3`, `phynt-genom3`, `mrsim-gazebo`) are part of `telekyb3` - full credit
 for their design and implementation goes to the original authors and to the
 [RAINBOW team](https://team.inria.fr/rainbow/).
 
-## Showcase - Assignment 6a: Physical Interaction in Gazebo
+**Terminology used throughout.** Two different gains are easy to confuse:
 
-Final assignment: a fully-actuated tilted hexarotor (TiltHex) equipped with a 0.6 m carbon-fiber
-end-effector slides along a 1 m square pattern on a static thin wall, with contact forces shaped by an
-**admittance filter** and a **wrench observer** (`phynt-genom3`).
+| Symbol | Where | Value | Meaning |
+|---|---|---|---|
+| `Kpxy`, `Kvxy` | `uavpos` position controller | 5, 7 | position / velocity gains; in steady contact `fx = −Kpxy·e_x − Kvxy·e_vx` (00b Q4) |
+| `K_x` | `phynt` admittance filter | 10 N/m | admittance stiffness in x (`af_K[0]`), with AF mass 5 kg and `B = 2·sqrt(m·K)` |
 
-https://github.com/user-attachments/assets/128ed5de-2f88-4ef9-a5f8-4a10dfc13c03
+All forces in this README are **estimates** (wrench observer output or the uavpos force command). There is
+no contact-force measurement in the simulation (no contact or F/T sensor).
 
 ---
 
@@ -32,21 +44,14 @@ https://github.com/user-attachments/assets/128ed5de-2f88-4ef9-a5f8-4a10dfc13c03
 
 1. [Framework & background](#framework--background)
 2. [Repository layout](#repository-layout)
-3. [Setup - running everything inside the `tk3lab` Docker image](#setup--running-everything-inside-the-tk3lab-docker-image)
-4. [Assignments](#assignments)
-   - [1a - Quadrotor in Gazebo](#1a--quadrotor-in-gazebo)
-   - [1b - Under-actuated hexarotor in Gazebo](#1b--under-actuated-hexarotor-in-gazebo)
-   - [1c - Fully-actuated hexarotor (TiltHex) in Gazebo](#1c--fully-actuated-hexarotor-tilthex-in-gazebo)
-   - [2b - Standalone rigid-body simulator](#2b--standalone-rigid-body-simulator)
-   - [2c - Simulator + nhfc controller](#2c--simulator--nhfc-controller)
-   - [3a - Kinematic trajectory generation (`maneuver-genom3`)](#3a--kinematic-trajectory-generation-maneuver-genom3)
-   - [3b - Polynomial trajectories with full derivative chain](#3b--polynomial-trajectories-with-full-derivative-chain)
-   - [4 - State estimation with `pom-genom3`](#4--state-estimation-with-pom-genom3)
-   - [5a - Motion control with `uavpos`/`uavatt`](#5a--motion-control-with-uavposuavatt)
-   - [5b - Motion control with a custom Python feedback-linearization controller](#5b--motion-control-with-a-custom-python-feedback-linearization-controller)
-   - [6a - Physical interaction with a wall](#6a--physical-interaction-with-a-wall)
-5. [Acknowledgments](#acknowledgments)
-6. [References](#references)
+3. [Requirements and container](#requirements-and-container)
+4. [Verified workflow: t01 (AF on)](#verified-workflow-t01-af-on)
+5. [Using 6a unmodified: known read problems and the noc path](#using-6a-unmodified-known-read-problems-and-the-noc-path)
+6. [Fixed issues](#fixed-issues)
+7. [Open issues](#open-issues)
+8. [Original 6a assignment](#original-6a-assignment)
+9. [Acknowledgments](#acknowledgments)
+10. [References](#references)
 
 ---
 
@@ -87,372 +92,224 @@ of the real flight controller / ESC / IMU stack on the physical platform.
 ## Repository layout
 
 ```
-tk3lab-ws/
-├── README.md                                ← this file
-├── LICENSE
-├── assets/                                  ← README media (diagrams + demo video)
+noc-ws/                                      (container: /shared-workspace)
+├── README.md, LICENSE, CLAUDE.md
+├── assets/                                  ← README diagrams
 ├── gazebo/
-│   ├── models/
-│   │   ├── mrsim-hexa-ua/                   ← under-actuated hexa SDF
-│   │   └── mrsim-tilthex/                   ← fully-actuated hexa SDF (with EE bar for 6a)
-│   └── worlds/
-│       ├── hexa-ua-world.world              ← hexa-UA + ground
-│       └── hexa-fa-wall-world.world         ← hexa-FA + thin static wall (assignment 6a)
-├── logs/                                    ← runtime logs (auto-populated)
-└── src/
-    ├── 01-intro/                            ← assignment 1a/b/c - Gazebo intro
-    ├── 02b-model/                           ← assignment 2b - standalone rigid-body sim
-    ├── 02c-model/                           ← assignment 2c - sim + nhfc
-    ├── 03a-trajectory/                      ← assignment 3a - kinematic trajectories
-    ├── 03b-trajectory/                      ← assignment 3b - polynomial trajectories
-    ├── 04-state-estimation/                 ← assignment 4 - state estimation
-    ├── 05a-motion-control/                  ← assignment 5a - uavpos / uavatt
-    ├── 05b-motion-control/                  ← assignment 5b - custom Python FB-lin
-    └── 06a-physical-interaction/            ← assignment 6a - phynt + wall
+│   ├── models/mrsim-tilthex/                ← TiltHex SDF with the EE bar + sphere tip (r = 0.04 m)
+│   └── worlds/hexa-fa-wall-world.world      ← TiltHex + thin static wall at x = 2.0 m
+├── src/06a-physical-interaction/            ← original lab 6a, NOT modified (simulation.sh, model_hexa_fa.py, plot_06a.py)
+├── noc/
+│   ├── common/      params.py (physical parameters with sources), telekyb_io.py (output-port readers),
+│   │                setup_06a.py (6a setup + rotor_measure fix), flight.py (goto, safety, recording helpers)
+│   ├── config/      af_on_baseline.json (reference controller / AF / WO configuration, run t01)
+│   ├── tests/       experiments (t00_*, t01_af_on.py) and host unit tests (test_*.py, fake_genomix.py)
+│   ├── analysis/    log readers and per-experiment analysis (baseline_06a, a00_diag, a01_af_on)
+│   └── results/     reports: 00_baseline.md, 00b_diagnosis.md, 01_af_on.md (+ metrics/plots)
+└── logs/                                    ← raw logs, gitignored (logs/noc/<experiment>/)
 ```
 
-Every assignment folder contains a `simulation.sh` (which spawns the required GenoM3 components, and
-optionally Gazebo), one or more Python clients that drive the components, and a plotting script that
-post-processes the recorded data.
+`mrsim-rotor` (used six times by the TiltHex SDF) is not in this repo; it comes from the tk3lab image
+(`/opt/openrobots`). `simulation.sh` prepends `/shared-workspace/gazebo/models` to `GZ_SIM_RESOURCE_PATH`
+so the local `mrsim-tilthex` (with the EE bar) wins over the image copy.
 
 ---
 
-## Setup - running everything inside the `tk3lab` Docker image
+## Requirements and container
 
-The lab is distributed as a Docker image (`tk3lab`) provided by the lecturers. It bundles `telekyb3`,
-Gazebo (Ionic), GenoM3, all components above, and a noVNC desktop accessible from a browser.
+- The `tk3lab` Docker image provided by the lecturers (`art/tk3lab:ionic-0.2`: telekyb3, GenoM3,
+  Gazebo Ionic, noVNC desktop) and the lecturers' release scripts in `~/tk3lab/releases/r-1.3/scripts`.
+- Host: Python 3 with numpy and matplotlib in `.venv/` (analysis and unit tests only).
+
+The lecturers' `tk3lab-run` mounts `~/tk3lab-ws`. This project needs `~/noc-ws` mounted instead.
+`tk3lab-run-noc` is **not** in this repo; create it once from `tk3lab-run` (script by Gianluca Corsini,
+IRISA) by changing only the workspace directory:
 
 ```bash
-# (host) load + run the image
+# (host)
 cd ~/tk3lab/releases/r-1.3/scripts
-sh tk3lab-load ~/tk3lab/docker-images/dimg-0.2/tk3lab-ionic-0.2.tar.gz
-sh tk3lab-run -g ionic -v 0.2
-
-# open http://localhost:6080 in any browser → Linux desktop
-# the workspace at /shared-workspace inside the container is the host's ~/tk3lab-ws/
+sh tk3lab-load ~/tk3lab/docker-images/dimg-0.2/tk3lab-ionic-0.2.tar.gz   # once, if the image is not loaded
+cp tk3lab-run tk3lab-run-noc
+sed -i 's#TK3WS_DIR="${HOME}/tk3lab-ws"#TK3WS_DIR="${HOME}/noc-ws"#' tk3lab-run-noc
+sh tk3lab-run-noc -g ionic -v 0.2
+# open http://localhost:6080 → Linux desktop; /shared-workspace inside the container is ~/noc-ws
 ```
 
-Two Docker terminals are typically used:
-- **Terminal 1** runs `simulation.sh` (Gazebo + components).
-- **Terminal 2** runs the Python client that drives the simulation.
-Plots are produced *outside* the container, on the host PC, since matplotlib in noVNC is slow.
+Host unit tests (no Docker):
+
+```bash
+cd ~/noc-ws && .venv/bin/python -m unittest discover -s noc/tests -t .
+```
 
 ---
 
-## Assignments
+## Verified workflow: t01 (AF on)
 
-> Each assignment expects two terminals inside the Docker desktop (T1 / T2) and a third one on the host (H)
-> for plotting. Detailed run instructions are repeated in each section.
+`noc/tests/t01_af_on.py` runs the 6a contact scenario (same waypoints and timing as 6a) through the noc
+path: `setup_06a.setup()` (6a `setup()` + the `rotor_measure` connection), non-blocking `flight.goto`,
+a 50 Hz recorder of output ports, and the `flight.Safety` monitor (retreat + land + `stop()` on a trip).
 
-### 1a - Quadrotor in Gazebo
-
-A pre-existing world (`/opt/openrobots/share/gazebo/worlds/example.world`) is launched with
-`mrsim-gazebo`, `pom-genom3`, `optitrack-gazebo`, `rotorcraft-genom3`, and `nhfc-genom3` wired together.
-The Python client moves the quadrotor through 3 waypoints. The goal of this assignment is to get familiar
-with the full GenoM3 stack used in every later assignment.
+**T1** - in a noVNC desktop terminal (`simulation.sh` needs the desktop for Gazebo):
 
 ```bash
-# T1
-cd /shared-workspace/src/01-intro && sh tk3-quadrotor-simulation.sh
-# T2
-cd /shared-workspace/src/01-intro && python3 -i tk3-quadrotor-control.py
->>> simulation()
-# H
-python3 plot_gazebo.py   # LOG_DIR points at logs/01-intro/quad
+cd /shared-workspace/src/06a-physical-interaction && sh simulation.sh
 ```
 
-### 1b - Under-actuated hexarotor in Gazebo
+When the Gazebo window opens, press **Play**.
 
-Same as 1a but with a 6-rotor under-actuated platform (`mrsim-hexa-ua` SDF, no propeller tilt) and a custom
-world (`hexa-ua-world.world`). `nhfc-genom3` is re-tuned for the heavier hexa frame.
+**T2** - a second terminal inside the container:
 
 ```bash
-# T1
-cd /shared-workspace/src/01-intro && sh tk3-hexa-ua-simulation.sh
-# T2
-cd /shared-workspace/src/01-intro && python3 -i tk3-hexarotor-ua-control.py
->>> simulation()
+cd /shared-workspace
+python3 -m noc.tests.t01_af_on --check   # setup + start + preflight + stop, no flight → logs/noc/t01_check/
+python3 -m noc.tests.t01_af_on           # flight (80 s) → logs/noc/t01_af_on/
 ```
 
-### 1c - Fully-actuated hexarotor (TiltHex) in Gazebo
+`--check` prints `[check] reads ALL OK; wrench_measure.force valid: True; ...` and exits 0 only when every
+preflight read succeeds and `wrench_measure.force` (needs the `rotor_measure` connection) and
+`rotor_measure.velocity` are valid; details in `logs/noc/t01_check/check.json`.
 
-Same software stack as 1b but with the `mrsim-tilthex` SDF - rotors are tilted ±21° / ±18° so the
-platform can produce non-zero lateral force/moment without changing attitude. Demonstrates that `nhfc`
-also handles the fully-actuated case (with appropriate gains).
+**H** - analysis on the host:
 
 ```bash
-# T1: re-uses the under-actuated launcher (Gazebo world identical)
-cd /shared-workspace/src/01-intro && sh tk3-hexa-ua-simulation.sh
-# T2
-cd /shared-workspace/src/01-intro && python3 -i tk3-hexarotor-fa-control.py
->>> simulation()
+cd ~/noc-ws && .venv/bin/python -m noc.analysis.a01_af_on   # → noc/results/01_af_on/ (metrics.json, compare.png)
 ```
 
-### 2b - Standalone rigid-body simulator
+Run outputs (`logs/noc/t01_af_on/`): `t01_af_on.npz` (all samples + meta/events JSON), `meta.json`
+(git rev, safety version, abort reason), `events.json` (goto call times), `snapshots.json` (phynt
+parameters/log_info), `preflight.json`, and the component logs copied by 6a `stop()` (redirected `LOG_DIR`).
+The reference run t01 (2026-11-04, git `0e9a210`, safety version 1) and its npz sha256 are recorded in
+`noc/config/af_on_baseline.json`. Neither the scripts nor the simulator seed are randomised by us; the
+simulator seed is not recorded.
 
-Pure Python implementation of the multi-rotor rigid-body equations of motion (Newton–Euler) integrated
-with RK4. No GenoM3 / Gazebo. Compares two thrust regimes:
-1. `thrust = m·g` (perfect hover)
-2. `thrust = m·g + 1 N` (small unbalance → climb).
+---
 
-This isolates the dynamics layer from everything else so we can reason about it in pure Python.
+## Using 6a unmodified: known read problems and the noc path
 
-```bash
-# H (no Docker needed)
-cd src/02b-model && python3 model.py
-```
+`src/06a-physical-interaction/` is kept exactly as submitted. Run as-is (`python3 -i model_hexa_fa.py`,
+`simulation()`), it has these problems (`noc/results/00b_diagnosis.md`):
 
-#### Plots
+| Problem in 6a | Effect | noc path |
+|---|---|---|
+| `setup()` never connects `uavatt.rotor_measure` | `wrench_measure.force` is None → WO writes nothing → AF deviation 0, `phynt.log` empty | `noc.common.setup_06a.setup(m)` |
+| `maneuver.goto(...)` without `ack` | each call blocks for the whole motion (2.0–5.1 s); no samples during motion | `noc.common.flight.goto(m, args)` (`ack=True`) |
+| `read_desired_phynt()` / `read_nominal()` read `d['pos']['x']`; `pos` is None in static phases | `TypeError` swallowed, zeros written (`simulation_data.npz`: `p_nom` 4000/4000 zero) | `noc.common.telekyb_io` readers mark None explicitly |
+| `read_state()` calls `pom.frame()` without the port name | fails every call, `pos`/`vel` zero in the npz | `telekyb_io.read_pom` (`pom.frame('robot')`) |
+| `read_external_wrench()` calls `get_wo_data`, which does not exist | `f_ext` zero in the npz | `telekyb_io.read_external_wrench` (output port `external_wrench`) |
+| input ports (e.g. `phynt.reference`) read from Python | genomix `TypeError` (needs a path) | read only output ports / attribute services (`get_reference`) |
+| `stop()` copies component logs to a fixed `LOG_DIR` | overwrites `logs/06a-physical-interaction/gazebo/` | `setup_06a.load_06a(log_dir)` redirects to `logs/noc/<exp>/` |
+| `plot_06a.py` "contact force" | computed `K_WALL × penetration`, not a measurement | `noc/analysis/` reports label every force as estimate |
 
-| `thrust = mg` (hover) | `thrust = mg + 1N` (climb) |
-|---|---|
-| ![hover](src/02b-model/plots_part2b/thrust__mg.png) | ![climb](src/02b-model/plots_part2b/thrust__mg_plus_1N.png) |
+---
 
-### 2c - Simulator + nhfc controller
+## Fixed issues
 
-The standalone Python simulator from 2b is wired to the real `nhfc-genom3` controller through the GenoM3
-`state` and `rotor_input` ports. The Python loop publishes the simulated state at 1 kHz, reads the
-controller's rotor commands, and steps the dynamics.
+Only fixes that are applied in `noc/` and verified on a run are listed. `src/06a` is not modified.
 
-```bash
-# T1
-cd /shared-workspace/src/02c-model && sh simulation.sh   # only nhfc
-# T2
-cd /shared-workspace/src/02c-model && python3 -i model.py
-# H
-python3 plot_02c.py
-```
+**1. Wrench observer and admittance filter inactive.**
+- *Problem:* `phynt/external_wrench` never written (t00: 0 % valid), AF deviation exactly 0, `phynt.log`
+  header only (`log_info` total 0).
+- *Cause:* 6a `setup()` does not connect the `uavatt` input port `rotor_measure`, so
+  `uavatt/wrench_measure.force` (the WO input) is always None.
+- *Fix:* `noc/common/setup_06a.py`: after 6a `setup()`, verify the port (uavatt doc + live rotorcraft read),
+  then `uavatt.connect_port({'local': 'rotor_measure', 'remote': 'rotorcraft/rotor_measure'})`.
+- *Evidence (t01, `01_af_on.md` §1–4):* `wrench_measure.force` valid 0 % → 99.97 %, `external_wrench`
+  0 % → 100 %; `phynt.log` 0 → 59 485 rows; steady-contact AF deviation 0 → −55.0 mm; the logged
+  deviation is reproduced by the AF model driven by the logged WO force (RMS 2.1 mm, corr. 0.988).
 
-#### Plot
+**2. Recorder blind during motion.**
+- *Problem:* no samples while the drone moves; up to 5.1 s gaps.
+- *Cause:* `maneuver.goto` without `ack` blocks for the whole motion.
+- *Fix:* `noc/common/flight.py` `goto(m, args)` calls `maneuver.goto(*args, ack=True)`.
+- *Evidence:* goto call time 2.0–5.1 s (t00) → 0.8–7 ms (t01); recorder gaps > 100 ms 10 → 1 (the
+  remaining one is the blocking `set_wo_zero`, 2.6 s).
 
-![2c tracking](src/02c-model/plots_02c/plot_02c.png)
+**3. Input-port reads abort the run.**
+- *Problem:* first t00_diag run stopped with genomix `TypeError` (missing `path`) on `phynt.reference()`.
+- *Cause:* genomix input ports cannot be read without a path argument.
+- *Fix:* `noc/common/telekyb_io.py` reads only output ports and attribute services
+  (`phynt.get_reference()`, `uavatt.wrench_measure()`); `preflight()` records each source's status.
+- *Evidence:* t00_check ALL OK; t01 `meta.json` `read_error_counts = {}` over the whole flight.
 
-### 3a - Kinematic trajectory generation (`maneuver-genom3`)
+**4. 6a `stop()` overwrites earlier logs.**
+- *Problem:* a run through 6a `stop()` replaced the 6a baseline logs in `logs/06a-physical-interaction/gazebo/`.
+- *Cause:* 6a `LOG_DIR` is a fixed path.
+- *Fix:* `setup_06a.load_06a(log_dir)` sets the module's `LOG_DIR` to `logs/noc/<exp>/` before any run.
+- *Evidence:* after t01 (2026-11-04 17:21) the files in `logs/06a-physical-interaction/gazebo/` still have
+  their 2026-11-03 timestamps.
+- *What was lost before the fix:* the raw logs behind `noc/results/00_baseline.md`. Checked on
+  2026-11-04: `logs/06a-physical-interaction/gazebo_play_late/` does not exist in this workspace, and
+  of the 9 files in `noc/results/00_baseline/log_inventory.json` only `phynt.log` still matches its
+  sha256 (it is a 75-byte header with no data rows). The other 8 (`pom.log`, `pom-measurements.log`,
+  `uavpos.log`, `uavatt.log`, `maneuver.log`, `rotorcraft.log`, `opti.log`, `simulation_data.npz`) now
+  hold the t00_probe run. Preserved: the derived metrics (`metrics.json`), plots and the inventory with
+  sizes, row counts and sha256 of the lost files. `~/tk3lab-ws` was not searched.
 
-Adds [`maneuver-genom3`](https://git.openrobots.org/projects/maneuver-genom3) to the chain - a kinematic
-trajectory generator that produces position + velocity + acceleration + jerk + snap references compatible
-with `nhfc`'s `or_rigid_body::state` reference port. The user calls `maneuver.goto(x, y, z, yaw, T)`.
+---
 
-Three robots are exercised in identical Python sims: quadrotor, hexa-UA, hexa-FA.
+## Open issues
 
-```bash
-# T1
-cd /shared-workspace/src/03a-trajectory && sh simulation.sh
-# T2 (one of)
-python3 -i model_quad.py
-python3 -i model_hexa_ua.py
-python3 -i model_hexa_fa.py
-# H
-python3 plot_03a.py {quad|hexa-ua|hexa-fa}
-```
+- **Contact force is an estimate, not a measurement.** Steady contact in t01: uavpos force command
+  `fx` 0.622 N, WO `f_ext,x` −0.606 N. Both come from the same control chain and are not independent.
+  Measuring it needs a Gazebo contact or F/T sensor (the SDF has a "contact sensor" comment but no `<sensor>`).
+- **Lab requirement |Fx| ≥ 2 N is not met** (≈ 0.62 N estimated). The 2 N figure in the original 6a
+  write-up assumed a 500 N/m wall spring.
+- **Wall stiffness: hypothesis, not verified.** The world sets ODE `<kp>500</kp>`, but `<physics
+  type='unused'>` is started with `gz sim`; the default engine may ignore the ODE contact parameters.
+  The 6a baseline data give an effective wall stiffness ≥ ~1.1·10⁴ N/m under stated assumptions
+  (`00_baseline.md`); `params.K_WALL = 500` remains marked ASSUMPTION.
+- **Safety monitor v2 not flight-tested.** The external-wrench check is now active only while flying
+  (z > 0.5 m), because t01 (safety v1) tripped at landing on ground contact (WO |f| = 3.54 N, z = 0.237 m).
+  v2 is covered by a unit test only.
+- **`phynt.log` misses 7.5 % of records** (`log_info` miss 4 832 / 64 113 in t01).
+- **Steady contact windows are short.** 1.9–3.5 s against an AF settling time of ≈ 4.1 s; the measured
+  deviation (−55 mm) is 6–8 mm below the series-model prediction (61–63 mm).
+- **Static-phase reference `pos` is None** (00b E2) in `maneuver.desired` / phynt reference; the AF output
+  `phynt.desired` still carries pos and vel. Mechanism not verified.
+- **Gains not explored.** Kvxy sweep not done (model inference: Kvxy contributes ≈ 0.02 N statically and
+  does not set static stiffness). Live test of the admittance stiffness K_x is the next step.
+- **Model inconsistencies** (`CLAUDE.md`): rotor tilt mapping (SDF ≈ 20° vs `rx = −21.2°, ry = −18.7°`)
+  unverified; inertia is base-link only; `plot_06a.py` EE kinematics ignore the tip z offset.
+- **6a read functions** (table above) are not fixed in 6a itself; use the noc path.
 
-#### Plots
+---
 
-Fully-actuated hexarotor:
+## Original 6a assignment
 
-![3a hexa-fa](src/03a-trajectory/plots_03a/plot_03a_hexa-fa.png)
-
-<details>
-<summary>Show other robots (Quadrotor, Hexa-UA)</summary>
-
-**Quadrotor**
-![3a quad](src/03a-trajectory/plots_03a/plot_03a_quad.png)
-
-**Hexa-UA**
-![3a hexa-ua](src/03a-trajectory/plots_03a/plot_03a_hexa-ua.png)
-
-</details>
-
-### 3b - Polynomial trajectories with full derivative chain
-
-Drops `maneuver-genom3` and instead writes a quintic-polynomial trajectory generator in Python that fills
-*all* state derivatives up to snap, matching the `or_rigid_body::state` schema:
-
-```
-q(t)  = c0 + c1·t + c2·t² + c3·t³ + c4·t⁴ + c5·t⁵
-vel   = q'(t)        ← used by nhfc PD damping
-acc   = q''(t)       ← thrust feedforward
-jerk  = q'''(t)      ← attitude feedforward
-snap  = q''''(t)     ← motor torque feedforward
-```
-
-Without `jerk` and `snap` populated the inner loop loses its feedforward terms and tracking degrades
-significantly - verified empirically.
-
-```bash
-# T1
-cd /shared-workspace/src/03b-trajectory && sh simulation.sh
-# T2
-python3 -i model_{quad|hexa_ua|hexa_fa}.py
-# H
-python3 plot_03b.py {quad|hexa-ua|hexa-fa}
-```
-
-#### Plots
-
-Fully-actuated hexarotor:
-
-![3b hexa-fa](src/03b-trajectory/plots_03b/plot_03b_hexa-fa.png)
-
-<details>
-<summary>Show other robots (Quadrotor, Hexa-UA)</summary>
-
-**Quadrotor**
-![3b quad](src/03b-trajectory/plots_03b/plot_03b_quad.png)
-
-**Hexa-UA**
-![3b hexa-ua](src/03b-trajectory/plots_03b/plot_03b_hexa-ua.png)
-
-</details>
-
-### 4 - State estimation with `pom-genom3`
-
-Runs an end-to-end Gazebo simulation (`mrsim-gazebo` + `optitrack-gazebo` + `rotorcraft-genom3`) and feeds
-the noisy IMU and mocap measurements through [`pom-genom3`](https://git.openrobots.org/projects/pom-genom3)
-- an Unscented Kalman Filter that fuses IMU + magnetometer + mocap. Five noise/availability configurations
-are compared (baseline, GPS+mag at 10× noise, 100× noise, IMU-only at 10× noise, IMU-only at 100× noise).
-
-```bash
-# T1
-cd /shared-workspace/src/04-state-estimation && sh simulation.sh
-# T2
-python3 state_estimation.py <config-name>
-# H
-python3 plot_04.py [configs...]
-```
-
-#### Plots
-
-| State comparison (all configs) | Variance comparison (all configs) |
-|---|---|
-| ![4 states](src/04-state-estimation/plots_04/states_baseline_gps_mag_x10_gps_mag_x100_imu_only_x10_imu_only_x100.png) | ![4 variances](src/04-state-estimation/plots_04/variances_baseline_gps_mag_x10_gps_mag_x100_imu_only_x10_imu_only_x100.png) |
-
-### 5a - Motion control with `uavpos`/`uavatt`
-
-Replaces `nhfc-genom3` with the cascaded
-[`uavpos-genom3`](https://git.openrobots.org/projects/uavpos-genom3) /
-[`uavatt-genom3`](https://git.openrobots.org/projects/uavatt-genom3) pair, which is tailored for
-**fully-actuated** platforms (it explicitly accounts for bounded lateral force capability). Tracking and
-control wrenches are compared against the equivalent `nhfc` baseline from 03a.
-
-```bash
-# T1
-cd /shared-workspace/src/05a-motion-control && sh simulation.sh
-# T2
-python3 -i model_hexa_fa.py
-# H
-python3 plot_05a.py [compare]
-```
-
-#### Plots
-
-| Tracking - uavpos/uavatt vs nhfc | Wrench |
-|---|---|
-| ![5a tracking](src/05a-motion-control/plots_05a/tracking_compare.png) | ![5a wrench](src/05a-motion-control/plots_05a/wrench_compare.png) |
-
-### 5b - Motion control with a custom Python feedback-linearization controller
-
-Implements a feedback-linearization controller from scratch in Python, using the same dynamics simulator
-as in 03a/05a, and benchmarks it against both `nhfc` (03a) and `uavpos`/`uavatt` (05a). Demonstrates that
-a textbook FB-lin design produces similar tracking once velocity feedforward is included, but at the cost
-of writing every term ourselves.
-
-```bash
-# T1
-cd /shared-workspace/src/05b-motion-control && sh simulation.sh
-# T2
-python3 -i model_hexa_fa.py
-# H
-python3 plot_05b.py [compare]
-```
-
-#### Plots
-
-| Tracking - Python FB-lin vs nhfc vs uavpos/uavatt | Wrench |
-|---|---|
-| ![5b tracking](src/05b-motion-control/plots_05b/tracking_compare.png) | ![5b wrench](src/05b-motion-control/plots_05b/wrench_compare.png) |
-
-### 6a - Physical interaction with a wall
-
-The capstone assignment. A fully-actuated hexarotor equipped with an L-shaped end-effector (a vertical bar
-dropping from the drone disk's centre, then a horizontal bar along the body x-axis with a sphere tip) is
-tasked with making controlled contact with a thin static wall and sliding the tip along a 1 m square
-path.
-
-The interaction is mediated by [`phynt-genom3`](https://git.openrobots.org/projects/phynt-genom3), which
-implements:
+The submitted lab 6a, kept unmodified in `src/06a-physical-interaction/`: a fully-actuated hexarotor
+with an L-shaped end-effector (a vertical 0.10 m bar, then a horizontal 0.6 m bar along body x ending in
+a sphere tip of radius 0.04 m) makes contact with a thin static wall and slides the tip along a 1 m square.
+The interaction is mediated by [`phynt-genom3`](https://git.openrobots.org/projects/phynt-genom3):
 
 - a **wrench observer (WO)** that estimates the external wrench from the (known) rotor wrench and the
   measured drone state, following Tomić, Ott & Haddadin's design ([IEEE T-RO 2017](https://ieeexplore.ieee.org/document/8049322));
 - an **admittance filter (AF)** that turns the maneuver-generated nominal trajectory into a compliant
   reference (mass–spring–damper response to the estimated wrench).
 
-The full chain is:
-
 ![6a data flow](assets/6a_dataflow.png)
 
-#### World, model and parameters
+Demo recording of the original run: https://github.com/user-attachments/assets/128ed5de-2f88-4ef9-a5f8-4a10dfc13c03
 
-- **World:** `gazebo/worlds/hexa-fa-wall-world.world` - drops a 4 × 4 m static box at x = 2.0 m, 2 cm
-  thick, with low Coulomb friction (μ = 0.3) and Gazebo contact compliance (kp = 500, kd = 50).
-- **Drone SDF:** `gazebo/models/mrsim-tilthex/model.sdf` - vanilla `mrsim-tilthex` extended with a
-  vertical 0.10 m bar and a horizontal 0.6 m bar (purple) ending in a black sphere tip (radius 0.05 m).
-- **AF:** `af_K = [10, 100, 100, 50, 50, 50]` N/m  (lab requirement: *1 N for every 10 cm of nominal
-  position deviation* in the contact direction).
-- **WO:** `K = [1, 1, 1, 0, 0, 0]`, `fc = [20, 20, 20, 1, 1, 1]` (force part: lecturer's defaults; torque
-  part disabled because the integral form drifts under our discrete-time pipeline).
-- **Effective drone mass:** 2.72 kg (= 2.3 kg base + 6 × 0.07 kg per `mrsim-rotor`) - recovered from the
-  hover-thrust log; an incorrect value here causes the drone to under-thrust and never reach the wall.
-
-#### How to run
-
-```bash
-# T1
-cd /shared-workspace/src/06a-physical-interaction && sh simulation.sh
-# T2
-cd /shared-workspace/src/06a-physical-interaction
-python3 -i model_hexa_fa.py
->>> simulation()
-# H
-python3 plot_06a.py
-```
-
-#### Waypoint sequence
+Parameters set by 6a `setup()` (recorded in `noc/config/af_on_baseline.json`): AF
+`af_K = [10, 100, 100, 50, 50, 50]`, AF mass 5; WO `K = [1, 1, 1, 0, 0, 0]`, `fc = [20, 20, 20, 1, 1, 1]`;
+drone mass 2.72 kg (2.3 kg base + 6 × 0.07 kg `mrsim-rotor`).
 
 | t (s) | (x, y, z, yaw) | duration | description |
 |---|---|---|---|
 |  2 | (0,    0, 1.0, 0) | 5 | hover takeoff |
 | 10 | (1.2,  0, 1.0, 0) | 4 | approach wall |
-| 20 | - | - | WO calibration (`set_wo_zero`, 2 s, drone in hover near wall) |
+| 20 | - | - | WO calibration (`set_wo_zero`, 2 s) |
 | 22 | (1.55, 0, 1.0, 0) | 2 | contact bottom-left |
-| 30 | (1.55, 1, 1.0, 0) | 5 | slide Y → bottom-right |
-| 38 | (1.55, 1, 2.0, 0) | 5 | slide Z → top-right |
-| 46 | (1.55, 0, 2.0, 0) | 5 | slide Y → top-left |
-| 54 | (1.55, 0, 1.0, 0) | 5 | slide Z → close square |
-| 62 | (1.0,  0, 1.0, 0) | 4 | retract - same Z, no extra climb |
+| 30 | (1.55, 1, 1.0, 0) | 5 | slide Y |
+| 38 | (1.55, 1, 2.0, 0) | 5 | slide Z |
+| 46 | (1.55, 0, 2.0, 0) | 5 | slide Y |
+| 54 | (1.55, 0, 1.0, 0) | 5 | slide Z, close square |
+| 62 | (1.0,  0, 1.0, 0) | 4 | retract |
 | 69 | (0,    0, 0,   0) | 5 | land |
 
-**Lab requirement:** the EE must apply a normal contact force `|Fx| ≥ 2 N` against the wall while
-sliding through the inspection square (highlighted as the green band on the contact plot).
-
-`BODY_X_CONTACT = X_WALL − L_BAR + 0.15 = 1.55` m. With the sphere tip (`L_EFF = L_BAR + r_tip = 0.65` m),
-the nominal EE position lands `0.20` m past the wall surface. At equilibrium the AF spring
-(`K_v_x = 10` N/m) balances the Gazebo wall spring (`K_wall = 500` N/m):
-
-```
-penetration_ss = ΔEE_nom / (1 + K_wall / K_v_x) = 0.20 / 51 ≈ 4 mm
-F_ss           = K_wall · penetration_ss = 500 N/m · 0.004 m = 2 N   →  meets ≥ 2 N requirement
-```
-
-#### Plots
-
-| Tracking | Contact / EE position |
-|---|---|
-| ![6a tracking](src/06a-physical-interaction/plots_06a/gazebo/tracking.png) | ![6a contact](src/06a-physical-interaction/plots_06a/gazebo/contact.png) |
-
-| Nominal vs admittance-filtered | Idealised external wrench |
-|---|---|
-| ![6a nominal-vs-filtered](src/06a-physical-interaction/plots_06a/gazebo/nominal_vs_filtered.png) | ![6a wrench](src/06a-physical-interaction/plots_06a/gazebo/wrench.png) |
+The original plots in `src/06a-physical-interaction/plots_06a/gazebo/` come from the 6a run, in which the
+WO and AF were inactive (Fixed issue 1). Their "wrench" and "contact" panels show the idealised
+`K_WALL × penetration`, not a measured force.
 
 ---
 
@@ -467,6 +324,11 @@ intellectual credit for the lab design, the course material, the `tk3lab` Docker
 - The original authors of `telekyb3` and its constituent GenoM3 components, in particular **Anthony
   Mallet** (LAAS-CNRS) and the maintainers at IRISA-Inria, the University of Twente, and University
   College London.
+
+The container launcher `tk3lab-run` (from which `tk3lab-run-noc` is derived, see
+[Requirements and container](#requirements-and-container)) is by Gianluca Corsini, © 2026 IRISA (CNRS/INRIA),
+BSD-style license. The lab assignments 1–5b that preceded this project are in the git history of this
+repository (`git show b39a541:src/<lab>/...`).
 
 The wrench observer / admittance filter design follows:
 
