@@ -1,0 +1,1295 @@
+{
+ "meta": {
+  "git_rev": "129e311c472c637c2d71b5bd3b9428c56e61e574",
+  "model_06a": "/shared-workspace/src/06a-physical-interaction/model_hexa_fa.py",
+  "tf": 80.0,
+  "dt": 0.02,
+  "t_wo_zero": 20.0,
+  "waypoints": [
+   [
+    2.0,
+    [
+     0,
+     0,
+     1.0,
+     0,
+     5
+    ]
+   ],
+   [
+    10.0,
+    [
+     1.2,
+     0,
+     1.0,
+     0,
+     4
+    ]
+   ],
+   [
+    22.0,
+    [
+     1.5499999999999998,
+     0,
+     1.0,
+     0,
+     2
+    ]
+   ],
+   [
+    30.0,
+    [
+     1.5499999999999998,
+     1,
+     1.0,
+     0,
+     5
+    ]
+   ],
+   [
+    38.0,
+    [
+     1.5499999999999998,
+     1,
+     2.0,
+     0,
+     5
+    ]
+   ],
+   [
+    46.0,
+    [
+     1.5499999999999998,
+     0,
+     2.0,
+     0,
+     5
+    ]
+   ],
+   [
+    54.0,
+    [
+     1.5499999999999998,
+     0,
+     1.0,
+     0,
+     5
+    ]
+   ],
+   [
+    62.0,
+    [
+     1.0,
+     0,
+     1.0,
+     0,
+     4
+    ]
+   ],
+   [
+    69.0,
+    [
+     0,
+     0,
+     0,
+     0,
+     5
+    ]
+   ]
+  ],
+  "snapshot_times": {
+   "contact_1": 28.0,
+   "contact_2": 45.0
+  },
+  "seed": null,
+  "seed_note": "no RNG in this script; simulator has no recorded seed",
+  "sources": {
+   "pom": "pom.read_pom",
+   "phynt_ref": "phynt.read_phynt_get_reference",
+   "phynt_des": "phynt.read_phynt_desired",
+   "man_des": "maneuver.read_maneuver_desired",
+   "ext_wrench": "phynt.read_external_wrench",
+   "wrench_meas": "uavatt.read_uavatt_wrench_measure"
+  },
+  "started_unix": 1793807101.0999095,
+  "preflight": {
+   "pom": {
+    "reader": "pom.read_pom",
+    "ok": true,
+    "error": null,
+    "valid": {
+     "ts": true,
+     "pos": true,
+     "att": true,
+     "vel": true,
+     "avel": true,
+     "acc": true
+    },
+    "values": {
+     "ts": 1793807107.10173,
+     "pos": [
+      2.1086905909120338e-07,
+      -4.876640057514092e-06,
+      0.2133357611549247
+     ],
+     "att": [
+      0.9999999986225884,
+      -4.760177122325195e-05,
+      -2.1459890430565052e-05,
+      -5.326136727999218e-06
+     ],
+     "vel": [
+      4.5698978756103124e-05,
+      -0.00021298603248286435,
+      0.00044535103445315395
+     ],
+     "avel": [
+      -0.001648756856197353,
+      0.00041395826075489995,
+      -0.00047642629753927215
+     ],
+     "acc": [
+      0.005690620697620552,
+      -0.0045003706261685684,
+      -0.0014598880919629497
+     ]
+    }
+   },
+   "phynt_ref": {
+    "reader": "phynt.read_phynt_get_reference",
+    "ok": true,
+    "error": null,
+    "valid": {
+     "ts": false,
+     "pos": false,
+     "att": false,
+     "vel": false,
+     "acc": false
+    },
+    "values": {
+     "ts": NaN,
+     "pos": [
+      NaN,
+      NaN,
+      NaN
+     ],
+     "att": [
+      NaN,
+      NaN,
+      NaN,
+      NaN
+     ],
+     "vel": [
+      NaN,
+      NaN,
+      NaN
+     ],
+     "acc": [
+      NaN,
+      NaN,
+      NaN
+     ]
+    }
+   },
+   "phynt_des": {
+    "reader": "phynt.read_phynt_desired",
+    "ok": true,
+    "error": null,
+    "valid": {
+     "ts": true,
+     "pos": true,
+     "att": true,
+     "vel": true,
+     "acc": true
+    },
+    "values": {
+     "ts": 1793807106.595909,
+     "pos": [
+      -4.005489251289001e-06,
+      -2.8881272035829488e-05,
+      0.21301226921628302
+     ],
+     "att": [
+      0.999999999194066,
+      0.0,
+      0.0,
+      -4.014807459401285e-05
+     ],
+     "vel": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "acc": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "man_des": {
+    "reader": "maneuver.read_maneuver_desired",
+    "ok": true,
+    "error": null,
+    "valid": {
+     "ts": false,
+     "pos": false,
+     "att": false,
+     "vel": false,
+     "acc": false
+    },
+    "values": {
+     "ts": NaN,
+     "pos": [
+      NaN,
+      NaN,
+      NaN
+     ],
+     "att": [
+      NaN,
+      NaN,
+      NaN,
+      NaN
+     ],
+     "vel": [
+      NaN,
+      NaN,
+      NaN
+     ],
+     "acc": [
+      NaN,
+      NaN,
+      NaN
+     ]
+    }
+   },
+   "ext_wrench": {
+    "reader": "phynt.read_external_wrench",
+    "ok": true,
+    "error": null,
+    "valid": {
+     "ts": false,
+     "force": false,
+     "torque": false
+    },
+    "values": {
+     "ts": NaN,
+     "force": [
+      NaN,
+      NaN,
+      NaN
+     ],
+     "torque": [
+      NaN,
+      NaN,
+      NaN
+     ]
+    }
+   },
+   "wrench_meas": {
+    "reader": "uavatt.read_uavatt_wrench_measure",
+    "ok": true,
+    "error": null,
+    "valid": {
+     "ts": true,
+     "force": false,
+     "torque": false
+    },
+    "values": {
+     "ts": 1793807107.104752,
+     "force": [
+      NaN,
+      NaN,
+      NaN
+     ],
+     "torque": [
+      NaN,
+      NaN,
+      NaN
+     ]
+    }
+   }
+  },
+  "finished_unix": 1793807189.137588,
+  "error": null,
+  "read_error_counts": {},
+  "tmp_phynt_log_bytes_after_stop": 75,
+  "out_phynt_log_bytes": 75
+ },
+ "events": [
+  {
+   "name": "setup",
+   "t_nominal": -1.0,
+   "wall_start": 1793807101.0999143,
+   "wall_end": 1793807106.4118004,
+   "blocked_s": 5.3118860721588135
+  },
+  {
+   "name": "start",
+   "t_nominal": -1.0,
+   "wall_start": 1793807106.4119718,
+   "wall_end": 1793807107.1022398,
+   "blocked_s": 0.6902680397033691
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 2.0,
+   "wall_start": 1793807109.1239789,
+   "wall_end": 1793807114.2108943,
+   "blocked_s": 5.086915493011475,
+   "args": [
+    0,
+    0,
+    1.0,
+    0,
+    5
+   ]
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 10.0,
+   "wall_start": 1793807117.1240819,
+   "wall_end": 1793807121.1694207,
+   "blocked_s": 4.045338869094849,
+   "args": [
+    1.2,
+    0,
+    1.0,
+    0,
+    4
+   ]
+  },
+  {
+   "name": "phynt.set_wo_zero",
+   "t_nominal": 20.0,
+   "wall_start": 1793807127.12422,
+   "wall_end": 1793807129.5698931,
+   "blocked_s": 2.4456732273101807
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 22.0,
+   "wall_start": 1793807130.2427266,
+   "wall_end": 1793807132.2735538,
+   "blocked_s": 2.030827283859253,
+   "args": [
+    1.5499999999999998,
+    0,
+    1.0,
+    0,
+    2
+   ]
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 30.0,
+   "wall_start": 1793807137.123675,
+   "wall_end": 1793807142.1573052,
+   "blocked_s": 5.033630132675171,
+   "args": [
+    1.5499999999999998,
+    1,
+    1.0,
+    0,
+    5
+   ]
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 38.0,
+   "wall_start": 1793807145.1237326,
+   "wall_end": 1793807150.181097,
+   "blocked_s": 5.057364463806152,
+   "args": [
+    1.5499999999999998,
+    1,
+    2.0,
+    0,
+    5
+   ]
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 46.0,
+   "wall_start": 1793807153.123868,
+   "wall_end": 1793807158.1826565,
+   "blocked_s": 5.058788537979126,
+   "args": [
+    1.5499999999999998,
+    0,
+    2.0,
+    0,
+    5
+   ]
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 54.0,
+   "wall_start": 1793807161.123664,
+   "wall_end": 1793807166.1689932,
+   "blocked_s": 5.045329332351685,
+   "args": [
+    1.5499999999999998,
+    0,
+    1.0,
+    0,
+    5
+   ]
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 62.0,
+   "wall_start": 1793807169.1236455,
+   "wall_end": 1793807173.1607246,
+   "blocked_s": 4.037079095840454,
+   "args": [
+    1.0,
+    0,
+    1.0,
+    0,
+    4
+   ]
+  },
+  {
+   "name": "maneuver.goto",
+   "t_nominal": 69.0,
+   "wall_start": 1793807176.1236444,
+   "wall_end": 1793807181.1778533,
+   "blocked_s": 5.054208993911743,
+   "args": [
+    0,
+    0,
+    0,
+    0,
+    5
+   ]
+  },
+  {
+   "name": "stop",
+   "t_nominal": -1.0,
+   "wall_start": 1793807187.1342843,
+   "wall_end": 1793807189.1375468,
+   "blocked_s": 2.003262519836426
+  }
+ ],
+ "inventory": {
+  "console.log": {
+   "bytes": 14494,
+   "sha256": "2ea16125bc8c707feda9dbbb6745dd900360da9e772f9bc348e959f90e3f740e"
+  },
+  "events.json": {
+   "bytes": 2550,
+   "sha256": "3869711a59460c2b4b0ca8713fd9d802f274401ad98a3755c597fd746e7555de"
+  },
+  "maneuver.log": {
+   "bytes": 1111764,
+   "sha256": "270d55f10f2e50007570d38f29bd8e60fa653e186786f26bcb8369ca3aad5716"
+  },
+  "meta.json": {
+   "bytes": 4385,
+   "sha256": "ac65e188d282a8ebea2b5020e967970fe31669ac638a1ccf0b57454bb21a9f36"
+  },
+  "opti.log": {
+   "bytes": 875957,
+   "sha256": "da69c5b15b2666e263f4f01a7b99eaee5eb248a858fabf476a5ae5de1d8a5b78"
+  },
+  "phynt.log": {
+   "bytes": 75,
+   "sha256": "be175cb5452b28c37e6a36fe28c1ffc16aa9519e94f12f3f7edf5d7ab666b2ab"
+  },
+  "pom-measurements.log": {
+   "bytes": 11968381,
+   "sha256": "a6cc097cb668a4786a4674489a5bc77d72473816b576cb8f4485d8f83a83978f"
+  },
+  "pom.log": {
+   "bytes": 19954514,
+   "sha256": "ec72f1669ff57c6ee18da7d200ed207aaf0697e463e67807c374235fb3a9f735"
+  },
+  "preflight.json": {
+   "bytes": 2690,
+   "sha256": "b450d0561c488fe1c9ed4062a93deb382a021aa35fbbbc4165bd294c8746d6a6"
+  },
+  "rotorcraft.log": {
+   "bytes": 14772305,
+   "sha256": "35bf91e9feffd840690adf67a13ee40e445f478439dd638c3d59913495cedcad"
+  },
+  "snapshots.json": {
+   "bytes": 6786,
+   "sha256": "2a7fa17e5e670ddaab6b6f3c9353ca837f5764774a2b9fa6966cd1e9826b0213"
+  },
+  "t00_diag.npz": {
+   "bytes": 2788280,
+   "sha256": "03487eb32c3f42dc211552df61429aba53aba8bfd1448e81d7d1187e5822d3e1"
+  },
+  "uavatt.log": {
+   "bytes": 11349848,
+   "sha256": "c38a07fe215109609f9a6674d3e5ca12924a4c5f339b19e7e90c2968652bd626"
+  },
+  "uavpos.log": {
+   "bytes": 12360093,
+   "sha256": "84150affcef4ebc0f1624093f78170b413359036b75cf25f310576be09ec696a"
+  }
+ },
+ "component_log_rows": {
+  "pom": 55614,
+  "pom-measurements": 0,
+  "uavpos": 58840,
+  "uavatt": 58482,
+  "maneuver": 7982,
+  "phynt": 0,
+  "opti": 8104,
+  "rotorcraft": 54061
+ },
+ "t0_unix": 1793807106.415085,
+ "read_errors": {
+  "pom": {
+   "n_err": 0,
+   "first_err_t": null,
+   "messages": {},
+   "valid_frac": {
+    "ts": 1.0,
+    "pos": 1.0,
+    "att": 1.0,
+    "vel": 1.0,
+    "avel": 1.0,
+    "acc": 1.0
+   }
+  },
+  "phynt_ref": {
+   "n_err": 0,
+   "first_err_t": null,
+   "messages": {},
+   "valid_frac": {
+    "ts": 0.975,
+    "pos": 0.0,
+    "att": 0.0,
+    "vel": 0.806,
+    "acc": 0.806
+   }
+  },
+  "phynt_des": {
+   "n_err": 0,
+   "first_err_t": null,
+   "messages": {},
+   "valid_frac": {
+    "ts": 1.0,
+    "pos": 0.025,
+    "att": 0.025,
+    "vel": 0.83125,
+    "acc": 0.83125
+   }
+  },
+  "man_des": {
+   "n_err": 0,
+   "first_err_t": null,
+   "messages": {},
+   "valid_frac": {
+    "ts": 0.975,
+    "pos": 0.0,
+    "att": 0.0,
+    "vel": 0.0,
+    "acc": 0.0
+   }
+  },
+  "ext_wrench": {
+   "n_err": 0,
+   "first_err_t": null,
+   "messages": {},
+   "valid_frac": {
+    "ts": 0.0,
+    "force": 0.0,
+    "torque": 0.0
+   }
+  },
+  "wrench_meas": {
+   "n_err": 0,
+   "first_err_t": null,
+   "messages": {},
+   "valid_frac": {
+    "ts": 1.0,
+    "force": 0.0,
+    "torque": 0.0
+   }
+  }
+ },
+ "python_loop": {
+  "dt_wall_ms": {
+   "n": 3999,
+   "mean": 20.00001008047346,
+   "std": 221.78725745118254,
+   "rms": 222.68719759100694,
+   "min": 1.5001296997070312,
+   "max": 5107.3784828186035,
+   "p95_abs": 20.28827667236328,
+   "max_abs": 5107.3784828186035
+  },
+  "late_s": {
+   "n": 4000,
+   "mean": 1.8788066123723977,
+   "std": 1.556366661313716,
+   "rms": 2.4397113499639764,
+   "min": 2.6521682739255592e-05,
+   "max": 5.087524890899658,
+   "p95_abs": 4.626855686664577,
+   "max_abs": 5.087524890899658
+  },
+  "read_ms": {
+   "n": 4000,
+   "mean": 6.85987488274938,
+   "std": 4.03047174360506,
+   "rms": 7.956292219556459,
+   "min": 1.4586419999886857,
+   "max": 28.145486999960667,
+   "p95_abs": 14.223383849957825,
+   "max_abs": 28.145486999960667
+  },
+  "n_samples": 4000,
+  "blocking_events": [
+   {
+    "name": "setup",
+    "t": -5.315170764923096,
+    "blocked_s": 5.3118860721588135
+   },
+   {
+    "name": "start",
+    "t": -0.003113269805908203,
+    "blocked_s": 0.6902680397033691
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 2.7088937759399414,
+    "blocked_s": 5.086915493011475
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 10.708996772766113,
+    "blocked_s": 4.045338869094849
+   },
+   {
+    "name": "phynt.set_wo_zero",
+    "t": 20.709134817123413,
+    "blocked_s": 2.4456732273101807
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 23.827641487121582,
+    "blocked_s": 2.030827283859253
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 30.708590030670166,
+    "blocked_s": 5.033630132675171
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 38.70864748954773,
+    "blocked_s": 5.057364463806152
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 46.70878291130066,
+    "blocked_s": 5.058788537979126
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 54.70857882499695,
+    "blocked_s": 5.045329332351685
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 62.70856046676636,
+    "blocked_s": 4.037079095840454
+   },
+   {
+    "name": "maneuver.goto",
+    "t": 69.70855927467346,
+    "blocked_s": 5.054208993911743
+   },
+   {
+    "name": "stop",
+    "t": 80.71919918060303,
+    "blocked_s": 2.003262519836426
+   }
+  ],
+  "n_dt_gt_100ms": 10,
+  "n_dt_lt_5ms": 1413
+ },
+ "phases": {
+  "source": "component logs (maneuver.log, pom.log)",
+  "task_segments": [
+   [
+    25.314554929733276,
+    63.32201790809631
+   ]
+  ],
+  "steady_windows": [
+   [
+    26.842445850372314,
+    30.708590030670166
+   ],
+   [
+    36.73151397705078,
+    38.70864748954773
+   ],
+   [
+    44.75157284736633,
+    46.70878291130066
+   ],
+   [
+    52.756494998931885,
+    54.70857882499695
+   ],
+   [
+    60.74163293838501,
+    62.70856046676636
+   ]
+  ],
+  "n_free": 1350,
+  "n_task": 2000,
+  "n_steady": 1260
+ },
+ "port_unique_ts": {
+  "pom": 3971,
+  "phynt_ref": 14,
+  "phynt_des": 14,
+  "man_des": 9,
+  "ext_wrench": 0,
+  "wrench_meas": 3975
+ },
+ "nonzero_vel_rows": {
+  "phynt_ref": 0,
+  "phynt_des": 0,
+  "man_des": 0
+ },
+ "Q1_wo_sees_contact": {
+  "ext_force_valid_frac": 0.0,
+  "ext_force_free": {
+   "x": null,
+   "y": null,
+   "z": null
+  },
+  "ext_force_task": {
+   "x": null,
+   "y": null,
+   "z": null
+  },
+  "ext_force_steady": {
+   "x": null,
+   "y": null,
+   "z": null
+  },
+  "wrench_meas_valid_frac": 0.0,
+  "wrench_meas_free": {
+   "x": null,
+   "y": null,
+   "z": null
+  },
+  "wrench_meas_steady": {
+   "x": null,
+   "y": null,
+   "z": null
+  },
+  "minus_f_hat_qs_x_steady": {
+   "n": 1260,
+   "mean": -0.9218245462151785,
+   "std": 0.14185130391750364,
+   "rms": 0.9326748020762199,
+   "min": -1.3462,
+   "max": -0.4333380094488189,
+   "p95_abs": 1.158957930007835,
+   "max_abs": 1.3462
+  },
+  "wo_parameters_snapshots": {
+   "after_start": {
+    "wo": {
+     "K": [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     "L": [
+      0.11163521170465973,
+      0.11163521170465973,
+      0.11163521170465973,
+      0.0062439533909747,
+      0.0062439533909747,
+      0.0062439533909747
+     ],
+     "fc": [
+      20,
+      20,
+      20,
+      1,
+      1,
+      1
+     ],
+     "bias": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "thresh": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   },
+   "contact_1": {
+    "wo": {
+     "K": [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     "L": [
+      0.11163521170465973,
+      0.11163521170465973,
+      0.11163521170465973,
+      0.0062439533909747,
+      0.0062439533909747,
+      0.0062439533909747
+     ],
+     "fc": [
+      20,
+      20,
+      20,
+      1,
+      1,
+      1
+     ],
+     "bias": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "thresh": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   },
+   "contact_2": {
+    "wo": {
+     "K": [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     "L": [
+      0.11163521170465973,
+      0.11163521170465973,
+      0.11163521170465973,
+      0.0062439533909747,
+      0.0062439533909747,
+      0.0062439533909747
+     ],
+     "fc": [
+      20,
+      20,
+      20,
+      1,
+      1,
+      1
+     ],
+     "bias": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "thresh": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   },
+   "before_stop": {
+    "wo": {
+     "K": [
+      1,
+      1,
+      1,
+      0,
+      0,
+      0
+     ],
+     "L": [
+      0.11163521170465973,
+      0.11163521170465973,
+      0.11163521170465973,
+      0.0062439533909747,
+      0.0062439533909747,
+      0.0062439533909747
+     ],
+     "fc": [
+      20,
+      20,
+      20,
+      1,
+      1,
+      1
+     ],
+     "bias": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "thresh": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  }
+ },
+ "Q2_af_consistency": {
+  "af_parameters_snapshots": {
+   "after_start": {
+    "mass": 5,
+    "B": [
+     14.142135623730951,
+     44.721359549995796,
+     44.721359549995796,
+     31.622776601683793,
+     31.622776601683793,
+     31.622776601683793
+    ],
+    "K": [
+     10,
+     100,
+     100,
+     50,
+     50,
+     50
+    ],
+    "J": [
+     0.05,
+     0,
+     0,
+     0,
+     0.05,
+     0,
+     0,
+     0,
+     0.05
+    ],
+    "force": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "torque": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   },
+   "contact_1": {
+    "mass": 5,
+    "B": [
+     14.142135623730951,
+     44.721359549995796,
+     44.721359549995796,
+     31.622776601683793,
+     31.622776601683793,
+     31.622776601683793
+    ],
+    "K": [
+     10,
+     100,
+     100,
+     50,
+     50,
+     50
+    ],
+    "J": [
+     0.05,
+     0,
+     0,
+     0,
+     0.05,
+     0,
+     0,
+     0,
+     0.05
+    ],
+    "force": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "torque": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   },
+   "contact_2": {
+    "mass": 5,
+    "B": [
+     14.142135623730951,
+     44.721359549995796,
+     44.721359549995796,
+     31.622776601683793,
+     31.622776601683793,
+     31.622776601683793
+    ],
+    "K": [
+     10,
+     100,
+     100,
+     50,
+     50,
+     50
+    ],
+    "J": [
+     0.05,
+     0,
+     0,
+     0,
+     0.05,
+     0,
+     0,
+     0,
+     0.05
+    ],
+    "force": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "torque": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   },
+   "before_stop": {
+    "mass": 5,
+    "B": [
+     14.142135623730951,
+     44.721359549995796,
+     44.721359549995796,
+     31.622776601683793,
+     31.622776601683793,
+     31.622776601683793
+    ],
+    "K": [
+     10,
+     100,
+     100,
+     50,
+     50,
+     50
+    ],
+    "J": [
+     0.05,
+     0,
+     0,
+     0,
+     0.05,
+     0,
+     0,
+     0,
+     0.05
+    ],
+    "force": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    },
+    "torque": {
+     "x": 0,
+     "y": 0,
+     "z": 0
+    }
+   }
+  },
+  "K_x_used": 10.0,
+  "dev_free": {
+   "x": null,
+   "y": null,
+   "z": null
+  },
+  "dev_task": {
+   "x": null,
+   "y": null,
+   "z": null
+  },
+  "dev_steady": {
+   "x": null,
+   "y": null,
+   "z": null
+  },
+  "K_x_times_dev_x_steady_N": null,
+  "ext_force_x_steady_N": null,
+  "expected_dev_x_from_ext_m": null,
+  "dev_x_from_logs_uavpos_xd_minus_maneuver_x": {
+   "all_flight": {
+    "n": 56900,
+    "mean": -9.293048826795278e-07,
+    "std": 0.000397765930808061,
+    "rms": 0.00039776701637914645,
+    "min": -0.00530166997277326,
+    "max": 0.0029832496070119063,
+    "p95_abs": 0.0009764881664174885,
+    "max_abs": 0.00530166997277326
+   },
+   "steady": {
+    "n": 8570,
+    "mean": 0.0,
+    "std": 0.0,
+    "rms": 0.0,
+    "min": 0.0,
+    "max": 0.0,
+    "p95_abs": 0.0,
+    "max_abs": 0.0
+   }
+  }
+ },
+ "Q3_phynt_log": {
+  "log_info": {
+   "after_start": {
+    "miss": 0,
+    "total": 0
+   },
+   "contact_1": {
+    "miss": 0,
+    "total": 0
+   },
+   "contact_2": {
+    "miss": 0,
+    "total": 0
+   },
+   "before_stop": {
+    "miss": 0,
+    "total": 0
+   }
+  },
+  "tmp_phynt_log_bytes": {
+   "after_start": 75,
+   "contact_1": 75,
+   "contact_2": 75,
+   "before_stop": 75
+  },
+  "tmp_phynt_log_bytes_after_stop": 75,
+  "out_phynt_log_bytes": 75,
+  "out_phynt_log_rows": 0
+ },
+ "Q4_kp_ex": {
+  "Kpxy_06a": 5.0,
+  "Kvxy_06a": 7.0,
+  "mass": 2.7199999999999998,
+  "n_uavpos_rows_steady": 8570,
+  "e_x_steady_m": {
+   "n": 8570,
+   "mean": -0.18037773757292883,
+   "std": 0.005401140752004525,
+   "rms": 0.18045858398355935,
+   "min": -0.188357,
+   "max": -0.167526,
+   "p95_abs": 0.18732564999999998,
+   "max_abs": 0.188357
+  },
+  "e_vx_steady_m_s": {
+   "n": 8570,
+   "mean": -0.0019894429027421242,
+   "std": 0.02018925397859579,
+   "rms": 0.020287036729781827,
+   "min": -0.0606747,
+   "max": 0.0688856,
+   "p95_abs": 0.041316119999999984,
+   "max_abs": 0.0688856
+  },
+  "f_cmd_x_steady_N": {
+   "n": 8570,
+   "mean": 0.9158148658109685,
+   "std": 0.14613549358016045,
+   "rms": 0.9274009116473195,
+   "min": 0.428552,
+   "max": 1.363,
+   "p95_abs": 1.1487805,
+   "max_abs": 1.363
+  },
+  "Kpxy_abs_ex_steady_N": {
+   "n": 8570,
+   "mean": 0.9018886878646442,
+   "std": 0.027005703760022624,
+   "rms": 0.9022929199177967,
+   "min": 0.8376300000000001,
+   "max": 0.941785,
+   "p95_abs": 0.9366282499999999,
+   "max_abs": 0.941785
+  },
+  "m_Kpxy_abs_ex_steady_N": {
+   "n": 8570,
+   "mean": 2.453137230991832,
+   "std": 0.07345551422726153,
+   "rms": 2.454236742176407,
+   "min": 2.2783535999999995,
+   "max": 2.5616551999999997,
+   "p95_abs": 2.5476288399999993,
+   "max_abs": 2.5616551999999997
+  },
+  "f_cmd_x_minus_Kp_ex_Kv_evx_steady_N": {
+   "n": 8570,
+   "mean": 7.762712952136401e-08,
+   "std": 2.113036131200952e-06,
+   "rms": 2.114461553918258e-06,
+   "min": -7.499999999965867e-06,
+   "max": 7.199999999984996e-06,
+   "p95_abs": 4.4999999999351115e-06,
+   "max_abs": 7.499999999965867e-06
+  },
+  "minus_ext_force_x_steady_N": null,
+  "fit_steady_fx_eq_a_ex_b_evx_c": {
+   "a": -4.999998571052412,
+   "b": -7.000001564344282,
+   "c": 3.3226528906027397e-07,
+   "resid_rms": 2.1127958691844254e-06
+  },
+  "fit_fx_eq_a_ex_b_evx_c": {
+   "a": -4.793267857082648,
+   "b": -7.694214714469326,
+   "c": 0.01152947920505909,
+   "resid_rms": 0.3339154553041746,
+   "n": 50081
+  }
+ }
+}

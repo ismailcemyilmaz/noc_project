@@ -85,18 +85,50 @@ def main(log_dir=LOG_DIR, out_dir=OUT_DIR):
     M['python_loop'] = dict(dt_wall_ms=stats(dtw * 1e3), late_s=stats(d['late_s']),
                             read_ms=stats(d['read_s'] * 1e3), n_samples=int(len(tw)))
 
-    # ---------------------------------------------------------------- phases (from npz ports)
+    # ---------------------------------------------------------------- phases
+    # Primary: component logs (maneuver.log nominal + pom.log), because the npz
+    # reference reads can be unusable (in t00: maneuver.goto blocks the Python loop
+    # for the whole motion, and maneuver/phynt reference 'pos' was None when read).
+    # Fallback: npz man_des if the logs are missing.
     pos = d['pom.pos']
-    xnom = d['man_des.pos'][:, 0]
-    vnom = np.linalg.norm(d['man_des.vel'], axis=1)
-    ok_nom = d['man_des.valid.pos'] & d['man_des.valid.vel']
-    task = ok_nom & (xnom > X_TASK_NOM) & (pos[:, 0] > X_TASK_BODY)
+    mv, pl = L.get('maneuver'), L.get('pom')
+    if mv is not None and mv.n and pl is not None and pl.n:
+        tm, tp = mv['ts'] - T0, pl['ts'] - T0
+        xnom_p = np.interp(tp, tm, mv['x'])
+        task_p = (xnom_p > X_TASK_NOM) & (pl['x'] > X_TASK_BODY)
+        vnom_m = np.sqrt(mv['vx'] ** 2 + mv['vy'] ** 2 + mv['vz'] ** 2)
+        steady_ws = [(a + SETTLE_S, b) for a, b in
+                     segments((vnom_m < STATIC_V_TOL) & (mv['x'] > X_TASK_NOM), tm, min_len=SETTLE_S + 0.5)]
+        task_segs = segments(task_p, tp, min_len=0.5)
+        phase_src = 'component logs (maneuver.log, pom.log)'
+        # maneuver.log is written only while a motion is active: a static segment
+        # ends at the last row before the next goto. Extend each one to the next goto.
+        nxt = [e['wall_start'] - T0 for e in events if e['name'] == 'maneuver.goto']
+        steady_ws = [(a, min([g for g in nxt if g > a] or [b])) for a, b in steady_ws]
+    else:
+        xnom = d['man_des.pos'][:, 0]
+        vnom = np.linalg.norm(d['man_des.vel'], axis=1)
+        ok_nom = d['man_des.valid.pos'] & d['man_des.valid.vel']
+        task_n = ok_nom & (xnom > X_TASK_NOM) & (pos[:, 0] > X_TASK_BODY)
+        steady_ws = [(a + SETTLE_S, b) for a, b in
+                     segments(task_n & (vnom < STATIC_V_TOL), t, min_len=SETTLE_S + 0.5)]
+        task_segs = segments(task_n, t, min_len=0.5)
+        phase_src = 'npz man_des'
+    task = in_windows(t, task_segs)
     free = (pos[:, 2] > 0.5) & ~task & np.isfinite(pos[:, 2])
-    steady_ws = [(a + SETTLE_S, b) for a, b in
-                 segments(task & (vnom < STATIC_V_TOL), t, min_len=SETTLE_S + 0.5)]
     steady = in_windows(t, steady_ws) & task
-    M['phases'] = dict(task_segments=segments(task, t, min_len=0.5), steady_windows=steady_ws,
+    M['phases'] = dict(source=phase_src, task_segments=task_segs, steady_windows=steady_ws,
                        n_free=int(free.sum()), n_task=int(task.sum()), n_steady=int(steady.sum()))
+    # Python loop vs blocking calls
+    M['python_loop']['blocking_events'] = [dict(name=e['name'], t=e['wall_start'] - T0, blocked_s=e['blocked_s'])
+                                           for e in events if e['blocked_s'] > 0.1]
+    M['python_loop']['n_dt_gt_100ms'] = int((dtw > 0.1).sum())
+    M['python_loop']['n_dt_lt_5ms'] = int((dtw < 0.005).sum())
+
+    # ---------------------------------------------------------------- port update rates
+    M['port_unique_ts'] = {s: int(len(np.unique(d[f'{s}.ts'][np.isfinite(d[f'{s}.ts'])]))) for s in srcs}
+    M['nonzero_vel_rows'] = {s: int((np.nansum(np.abs(d[f'{s}.vel']), axis=1) > 0).sum())
+                             for s in ('phynt_ref', 'phynt_des', 'man_des')}
 
     # ---------------------------------------------------------------- [COMPUTED] controller-side f_hat
     up = L.get('uavpos')
@@ -171,11 +203,28 @@ def main(log_dir=LOG_DIR, out_dir=OUT_DIR):
     # ---------------------------------------------------------------- Q4 Kpxy * e_x
     if have_up:
         Q4 = dict(Kpxy_06a=KPXY_06A, Kvxy_06a=KVXY_06A, mass=P.MASS)
-        Q4['e_x_steady_m'] = stats(ex[steady])
-        Q4['f_cmd_x_steady_N'] = stats(fcx[steady])
-        Q4['Kpxy_abs_ex_steady_N'] = stats(KPXY_06A * np.abs(ex[steady]))
-        Q4['m_Kpxy_abs_ex_steady_N'] = stats(P.MASS * KPXY_06A * np.abs(ex[steady]))
+        su = in_windows(tu, steady_ws)
+        if L.get('pom') is not None:
+            su &= np.interp(tu, L['pom']['ts'] - T0, L['pom']['x']) > X_TASK_BODY
+        Q4['n_uavpos_rows_steady'] = int(su.sum())
+        Q4['e_x_steady_m'] = stats(up['e_x'][su])
+        Q4['e_vx_steady_m_s'] = stats(up['e_vx'][su])
+        Q4['f_cmd_x_steady_N'] = stats(up['fx'][su])
+        Q4['Kpxy_abs_ex_steady_N'] = stats(KPXY_06A * np.abs(up['e_x'][su]))
+        Q4['m_Kpxy_abs_ex_steady_N'] = stats(P.MASS * KPXY_06A * np.abs(up['e_x'][su]))
+        Q4['f_cmd_x_minus_Kp_ex_Kv_evx_steady_N'] = stats(
+            up['fx'][su] + KPXY_06A * up['e_x'][su] + KVXY_06A * up['e_vx'][su])
         Q4['minus_ext_force_x_steady_N'] = stats(-fe[steady, 0])
+        if su.sum() > 10:
+            A = np.column_stack([up['e_x'][su], up['e_vx'][su], np.ones(su.sum())])
+            cf, *_ = np.linalg.lstsq(A, up['fx'][su], rcond=None)
+            Q4['fit_steady_fx_eq_a_ex_b_evx_c'] = dict(a=float(cf[0]), b=float(cf[1]), c=float(cf[2]),
+                                                      resid_rms=float(np.sqrt(np.mean((up['fx'][su] - A @ cf) ** 2))))
+        # AF deviation from logs: uavpos reference (= phynt desired) - maneuver nominal
+        if mv is not None and mv.n:
+            dev_log = up['xd'] - np.interp(tu, mv['ts'] - T0, mv['x'])
+            M['Q2_af_consistency']['dev_x_from_logs_uavpos_xd_minus_maneuver_x'] = dict(
+                all_flight=stats(dev_log[tu > (mv['ts'][0] - T0)]), steady=stats(dev_log[su]))
         # [COMPUTED] least squares on uavpos log rows in flight: fx = a*e_x + b*e_vx + c
         zf = np.interp(tu, t, pos[:, 2]) > 0.5
         A = np.column_stack([up['e_x'][zf], up['e_vx'][zf], np.ones(zf.sum())])
