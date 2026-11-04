@@ -55,6 +55,16 @@
   }
  },
  "gate_A2": "PASSED iff C1..C5 all hold; otherwise FAILED",
+ "amendments": [
+  {
+   "id": 1,
+   "date": "2026-11-04",
+   "before_flight": true,
+   "scope": "reported_not_gated.settling_2sigma only; gate A2 criteria C1-C5 unchanged",
+   "reason": "the original rule (enter the band and stay inside until the hold ends) is ill-posed for a stationary noisy signal: by construction ~5 % of the steady samples lie outside a 2-sigma band of the steady part, so the last excursion falls near the hold end and the result is ~hold length or null (seen on t02 data and on the synthetic test data before the flight).",
+   "new_rule": "band as before (steady mean +/- 2 sigma of the 0.5 s moving average); settling time = time from the reference instant to the first sample after the last out-of-band sample in [reference instant, steady start). If the signal is still out of band right before the steady part, the value is (steady start - reference instant) flagged censored (lower bound). The fraction of steady samples outside the band is reported as a sanity check."
+  }
+ ],
  "reported_not_gated": {
   "settling_2sigma": "AF deviation dev = xd - maneuver x, centered moving average 0.5 s. For each hold: sigma = std of the moving-averaged dev over its steady part, band = steady mean +/- 2 sigma. Settling time = time from the end of the preceding K change (last ramp call for t03, the set call for t02 steps, the end of the contact goto for the first hold) until the moving-averaged dev enters the band and stays inside it until the hold ends; null if it never does. Computed the same way for t02 steps and t03 ramps.",
   "comparison_with_t02": "steady F, AF deviation, |WO efx| per K_x value; max |dfx| and |dxd| at each K change (t02 step windows +/- 1 s, t03 ramp windows); settling_2sigma"
