@@ -40,6 +40,9 @@ class FakeWorld:
         self.af_calls = []
         self.af_ignore_k = False   # test hook: set_af_parameters silently keeps the old K
         self.af_raise = None       # test hook: exception raised by set_af_parameters
+        # t03 hooks (defaults keep the t01/t02 behaviour):
+        self.des_valid_after_goto = False   # phynt.desired pos/att valid once a goto was sent
+        self.ext_empty_until_goto = False   # phynt.external_wrench raises EMPTY_POSTER before the first goto
 
     def tick(self):
         self.t += 0.001
@@ -64,6 +67,18 @@ def make_module(world=None, rotor_measure_ok=True):
                       'vel': {'vx': 0, 'vy': 0, 'vz': 0}, 'avel': {'wx': 0, 'wy': 0, 'wz': 0},
                       'acc': {'ax': 0, 'ay': 0, 'az': 0}, 'aacc': None, 'jerk': None, 'snap': None}}
 
+    def phynt_desired():
+        if w.des_valid_after_goto and w.gotos:
+            r = rb_state('desired', pos_none=False)
+            r['desired']['att'] = {'qw': 1.0, 'qx': 0.0, 'qy': 0.0, 'qz': 0.0}
+            return r
+        return rb_state('desired')
+
+    def external_wrench():
+        if w.ext_empty_until_goto and not w.gotos:
+            raise RuntimeError("::genom::mwerr: {'what': 'phynt/external_wrench port: S_posterLib_EMPTY_POSTER'}")
+        return wrench('external_wrench', w.wo_running)
+
     def wrench(key, valid):
         f = dict(zip('xyz', w.f_ext.tolist())) if valid else None
         return {key: {'ts': _ts(w.t) if valid else {'sec': 0, 'nsec': 0}, 'intrinsic': 0,
@@ -85,10 +100,10 @@ def make_module(world=None, rotor_measure_ok=True):
         return {}
 
     phynt = types.SimpleNamespace(
-        desired=lambda: rb_state('desired'), reference=_input_port, wrench_measure=_input_port,
+        desired=phynt_desired, reference=_input_port, wrench_measure=_input_port,
         state=_input_port,
         get_reference=lambda: rb_state('reference'),
-        external_wrench=lambda: wrench('external_wrench', w.wo_running),
+        external_wrench=external_wrench,
         get_af_parameters=lambda: {'af': copy.deepcopy(w.af)},
         set_af_parameters=set_af,
         get_wo_parameters=lambda: {'wo': {'bias': [0] * 6}},
