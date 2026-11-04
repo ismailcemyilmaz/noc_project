@@ -42,7 +42,9 @@ _FIELDS = {
     'acc': ('ax', 'ay', 'az'),
     'force': ('x', 'y', 'z'),
     'torque': ('x', 'y', 'z'),
+    'thrust': ('x', 'y', 'z'),
 }
+MAX_ROTORS = 8  # or_rotorcraft::output rotor sequence bound
 
 
 class PortFormatError(RuntimeError):
@@ -123,11 +125,42 @@ def read_uavatt_wrench_measure(uavatt):
     return flatten(unwrap(uavatt.wrench_measure(), 'wrench_measure'), WRENCH_FIELDS)
 
 
+def read_uavpos_uav_input(uavpos):
+    """uavpos OUTPUT port uav_input; 'thrust' is the force command (uavpos.log fx fy fz)."""
+    return flatten(unwrap(uavpos.uav_input(), 'uav_input'), ('thrust',))
+
+
+def read_rotor_measure(rotorcraft):
+    """rotorcraft OUTPUT port rotor_measure (or_rotorcraft::output, doc: uavatt README
+    rotor_measure). Returns velocity[MAX_ROTORS] (NaN-padded), n_rotors, latest rotor ts."""
+    rm = unwrap(rotorcraft.rotor_measure(), 'rotor_measure')
+    if 'rotor' not in rm:
+        raise PortFormatError(f"field 'rotor' missing from {list(rm)}")
+    rot = rm['rotor'] or []
+    vel = np.full(MAX_ROTORS, np.nan)
+    tss = []
+    for i, r in enumerate(rot[:MAX_ROTORS]):
+        vel[i] = float(r['velocity'])
+        tss.append(ts_to_float(r.get('ts')))
+    t = max([x for x in tss if not math.isnan(x)], default=math.nan)
+    out = {'ts': t, 'velocity': vel, 'n_rotors': float(len(rot))}
+    valid = {'ts': not math.isnan(t), 'velocity': len(rot) > 0, 'n_rotors': True}
+    return out, valid
+
+
 def invalid_sample(fields):
     """All-NaN sample with every valid flag False (for a read that raised;
     the caller must record the exception text separately)."""
-    out = {'ts': math.nan, **{f: np.full(len(_FIELDS[f]), np.nan) for f in fields}}
-    return out, {'ts': False, **{f: False for f in fields}}
+    out, valid = {'ts': math.nan}, {'ts': False}
+    for f in fields:
+        if f == 'velocity':
+            out[f] = np.full(MAX_ROTORS, np.nan)
+        elif f == 'n_rotors':
+            out[f] = math.nan
+        else:
+            out[f] = np.full(len(_FIELDS[f]), np.nan)
+        valid[f] = False
+    return out, valid
 
 
 def reference_source(phynt):
@@ -150,6 +183,12 @@ def build_sources(phynt):
         'ext_wrench': ('phynt', read_external_wrench, WRENCH_FIELDS),
         'wrench_meas': ('uavatt', read_uavatt_wrench_measure, WRENCH_FIELDS),
     }
+
+
+EXTRA_SOURCES = {
+    'uav_input': ('uavpos', read_uavpos_uav_input, ('thrust',)),
+    'rotor_meas': ('rotorcraft', read_rotor_measure, ('velocity', 'n_rotors')),
+}
 
 
 def describe_sources(sources):
