@@ -33,6 +33,13 @@ class FakeWorld:
         self.rotor_vel = [71.0] * 6
         self.thrust = np.array([0.0, 0.0, 26.7])
         self.gotos = []
+        self.af = {'mass': 5.0, 'B': [2 * (5.0 * k) ** 0.5 for k in (10, 100, 100, 50, 50, 50)],
+                   'K': [10.0, 100.0, 100.0, 50.0, 50.0, 50.0],
+                   'J': [0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.05],
+                   'force': {'x': 0, 'y': 0, 'z': 0}, 'torque': {'x': 0, 'y': 0, 'z': 0}}
+        self.af_calls = []
+        self.af_ignore_k = False   # test hook: set_af_parameters silently keeps the old K
+        self.af_raise = None       # test hook: exception raised by set_af_parameters
 
     def tick(self):
         self.t += 0.001
@@ -68,12 +75,22 @@ def make_module(world=None, rotor_measure_ok=True):
         w.pos = np.array([x, y, max(z, 0.21)], float)
         return 'ack-request' if ack else {}
 
+    def set_af(mass, B, K, J):
+        w.af_calls.append(dict(mass=mass, B=list(B), K=list(K), J=list(J)))
+        if w.af_raise is not None:
+            raise w.af_raise
+        w.af.update(mass=float(mass), B=[float(x) for x in B], J=[float(x) for x in J])
+        if not w.af_ignore_k:
+            w.af['K'] = [float(x) for x in K]
+        return {}
+
     phynt = types.SimpleNamespace(
         desired=lambda: rb_state('desired'), reference=_input_port, wrench_measure=_input_port,
         state=_input_port,
         get_reference=lambda: rb_state('reference'),
         external_wrench=lambda: wrench('external_wrench', w.wo_running),
-        get_af_parameters=lambda: {'af': {'mass': 5, 'K': [10, 100, 100, 50, 50, 50]}},
+        get_af_parameters=lambda: {'af': copy.deepcopy(w.af)},
+        set_af_parameters=set_af,
         get_wo_parameters=lambda: {'wo': {'bias': [0] * 6}},
         get_body_parameters=lambda: {'body': {'mass': 2.72}},
         log_info=lambda: {'miss': 0, 'total': 0},
@@ -98,5 +115,6 @@ def make_module(world=None, rotor_measure_ok=True):
             'att': None, 'avel': None, 'aacc': None}}),
         rotorcraft=types.SimpleNamespace(**rc_attrs),
         waypoints=[(0.0, (0, 0, 1.0, 0, 5)), (0.1, (1.55, 0, 1.0, 0, 2))],
+        BODY_X_CONTACT=1.55,
         setup=lambda: None, start=lambda: None, stop=lambda: None, LOG_DIR=None)
     return m

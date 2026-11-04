@@ -148,6 +148,26 @@ def read_rotor_measure(rotorcraft):
     return out, valid
 
 
+AF_SHAPES = {'mass': 1, 'K': 6, 'B': 6, 'J': 9}
+AF_FIELDS = tuple(AF_SHAPES)
+
+
+def read_af_parameters(phynt):
+    """phynt attribute service get_af_parameters -> {'af': {mass, B[6], K[6], J[9], ...}}
+    (shape as in the t01 snapshots). No timestamp: 'ts' is NaN and valid['ts'] False."""
+    af = unwrap(phynt.get_af_parameters(), 'af')
+    out, valid = {'ts': math.nan}, {'ts': False}
+    for f, n in AF_SHAPES.items():
+        if f not in af:
+            raise PortFormatError(f'field {f!r} missing from {list(af)}')
+        arr = np.atleast_1d(np.asarray(af[f], dtype=float))
+        if arr.size != n:
+            raise PortFormatError(f'af.{f}: expected {n} values, got {arr.size}')
+        out[f] = float(arr[0]) if n == 1 else arr
+        valid[f] = True
+    return out, valid
+
+
 def invalid_sample(fields):
     """All-NaN sample with every valid flag False (for a read that raised;
     the caller must record the exception text separately)."""
@@ -155,8 +175,10 @@ def invalid_sample(fields):
     for f in fields:
         if f == 'velocity':
             out[f] = np.full(MAX_ROTORS, np.nan)
-        elif f == 'n_rotors':
+        elif f == 'n_rotors' or f == 'mass':
             out[f] = math.nan
+        elif f in AF_SHAPES:
+            out[f] = np.full(AF_SHAPES[f], np.nan)
         else:
             out[f] = np.full(len(_FIELDS[f]), np.nan)
         valid[f] = False
