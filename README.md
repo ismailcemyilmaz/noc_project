@@ -214,9 +214,10 @@ simulator seed is not recorded.
 its free-flight bias), aligned on simulation time and filtered with a 0.5 s moving average. Raw F/T is used
 for diagnosis only.
 
-*Why.* DART solves the wall as a rigid contact, so the instantaneous F/T signal is impulsive: in steady
-contact the median is ≈ 0, pulses last 1–2 physics steps and reach −50 N (`04b_impulse_origin.md`). The mean
-agrees with the series model: t04 F/T **0.616 N** [measured], prediction **0.613 N** [computed].
+*Why.* DART does not read `<ode><kp>/<kd>/<min_depth>`, so the contact is rigid and the instantaneous F/T
+signal is impulsive: in steady contact the median is ≈ 0, pulses last 1–2 physics steps and reach −50 N
+(`04b_impulse_origin.md`). The filtered mean agrees with the series model: t04 F/T **0.616 N** [measured],
+prediction **0.613 N** [computed]. The optimisation therefore works on the mean force.
 
 *How far this is supported.* One flight, one operating point (`K_x` = 10, `d0` = 0.184 m). The 95 % CI of
 that mean is 0.540–0.697 N, so agreement is resolved only to about ±13 %. The 0.616 N uses the post-hoc
@@ -306,10 +307,14 @@ Only fixes that are applied in `noc/` and verified on a run are listed. `src/06a
 
 ## Open issues
 
-- **Contact is impulsive (rigid DART contact).** In steady contact, pulses are irregular (≈ 29 Hz), mostly
-  1–2 physics steps long, and the tip leaves the wall by up to 2.3 mm (opti). First impact in t04: −350 N.
-  **Decision (2026-11-09):** treated as simulator-origin on the basis of 04b, no passive spring is added,
-  and t06 is not flown. No control-variant flight tested this attribution; 04b itself leaves it open.
+- **The origin of the pulses is not definitively separated.** In steady contact, pulses are irregular
+  (≈ 29 Hz) and mostly 1–2 physics steps long. 04b attributes the pulse shape to DART rigid contact, and the
+  control sets the mean force. No flight varied the control to test this. **Decision (2026-11-09):** t06 is
+  not flown, no passive spring is added, and the optimisation works on the mean force.
+- **The tip leaves the wall by up to 2.3 mm** in steady contact (opti, `04b_impulse_origin.md` §4). The
+  contact fraction is 22–77 % depending on the tolerance (0–0.5 mm).
+- **First impact is about 350 N** (t04, −349.7 N F/T, 2 s contact goto); the rigid-contact estimate
+  m_eff·v/dt gives 368 N (`04b_impulse_origin.md` §3).
 - **Lab requirement |Fx| ≥ 2 N is not met** (0.616 N F/T in t04). The 2 N figure in the original 6a
   write-up assumed a 500 N/m wall spring, which is not applied (fixed issue 9). The series model bounds the
   force at 0.92 N for the current `d0` and `Kpxy`; see `noc/results/README_summary.md`.
@@ -324,8 +329,9 @@ Only fixes that are applied in `noc/` and verified on a run are listed. `src/06a
 - **Settling time not determined reliably.** Noise and slow drifts mask it: `K_x` steps 1.9–2.5 s (t02),
   ramps 1.02 s and ≥ 9.96 s censored (t03); one sample per transition type.
 - **Fixed `B`.** `K_x` changes keep B = 14.14 N·s/m, so ζ falls from 1.0 to 0.71 at `K_x` = 20 (computed).
-- **Simulation slower than real time.** RTF 0.68 over the t04 flight (0.645 in contact). Control runs on the
-  wall clock and the plant on sim time, so wall-clock speeds are about 1/RTF larger in sim time.
+- **`maneuver` runs on the wall clock and RTF is about 0.64** (0.645 in t04 contact, 0.68 over the flight).
+  The controllers also run on the wall clock and the plant on sim time, so a commanded speed is about
+  1/RTF ≈ 1.56 times larger in sim time.
 - **`fx` noise higher in t03 than t02**, cause not determined (`03_k_ramp.md` H1).
 - **`phynt.log` misses 7.5 % of records** (`log_info` miss 4 832 / 64 113 in t01).
 - **Static-phase reference `pos` is None** (00b E2) in `maneuver.desired` / phynt reference; the AF output

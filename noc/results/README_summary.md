@@ -100,9 +100,11 @@ Kontrol wall-clock'ta, tesis sim zamanında çalışıyor; RTF 0.64'te wall-cloc
 | Sınırlama | Durum | Tür | Kaynak | Commit |
 |---|---|---|---|---|
 | **Rijit temas** | Motor DART; `kp/kd/min_depth` okunmuyor. Duvar pratikte rijit. | kaynak kod ve ikili dosya | `04b_impulse_origin.md` §5 | `a3e63a7` |
-| Darbeli F/T | ~29 Hz, çoğu 1–2 fizik adımı, tepe −50 N; ilk çarpma −350 N; medyan ≈ 0 | ÖLÇÜLEN-F/T | `04b_impulse_origin.md` §1, §3 | `a3e63a7` |
+| Darbeli F/T | ~29 Hz, çoğu 1–2 fizik adımı, tepe −50 N; medyan ≈ 0 | ÖLÇÜLEN-F/T | `04b_impulse_origin.md` §1 | `a3e63a7` |
 | Uç duvardan ayrılıyor | boşluk 2.3 mm'ye kadar | ÖLÇÜLEN-LOG (opti) | `04b_impulse_origin.md` §4 | `a3e63a7` |
-| Darbe kökeni | Karar (2026-11-09): simülatör kaynaklı kabul edildi; t06 uçurulmadı, kontrol varyantlarıyla test edilmedi | karar | `04b_impulse_origin.md` §6 | `a3e63a7` |
+| **Darbelerin kökeni kesin ayrılmadı** | 04b: darbe şekli DART rijit temasından, ortalama kuvvet kontrolden. Kontrol varyantlarıyla test edilmedi; t06 yapılmayacak (karar 2026-11-09). Optimizasyon ortalama kuvvet üzerinden. | sınırlama | `04b_impulse_origin.md` §6 | `a3e63a7` |
+| İlk çarpma | yaklaşık 350 N (−349.7 N, 2 s temas goto) | ÖLÇÜLEN-F/T | `04b_impulse_origin.md` §3 | `a3e63a7` |
+| Maneuver duvar saatinde | RTF ≈ 0.64; komut hızı sim zamanında yaklaşık 1.56 kat büyük | HESAP | `04b_impulse_origin.md` §2, §3 | `a3e63a7` |
 | **Ölçüm kuralı** | Kuvvet = sim zamanına hizalı, 0.5 s hareketli ortalamalı F/T normal kuvveti; ham F/T yalnız tanı için. Filtre sonrası fx ile RMSE 0.22 N. | kural | `README.md`, `04_ft_check.md` §3.3 | bu commit, `95dd080` |
 | **Oturma süresi ölçülemedi** | Güvenilir değer yok. Örnekler: basamak 1.87–2.47 s (t02), rampa 1.02 s ve ≥ 9.96 s censored (t03), geçiş başına tek örnek. | ÖLÇÜLEN-LOG, gürültü ile örtülü | `02_live_k.md` §4, `03_k_ramp.md` §5 | `4a848f7`, `be511f3` |
 | Oturma modeli | %2 oturma: K = 10 için ≈ 4.1 s, K = 20 için ≈ 2.8 s | HESAP | `03_k_ramp.md` §5 | `be511f3` |
