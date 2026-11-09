@@ -1,0 +1,507 @@
+{
+ "meta": {
+  "git_rev": "ed28b4441a76c82ce17e788de28b8fcd8053be6d",
+  "abort": null,
+  "error": null,
+  "read_error_counts": {},
+  "read_error_counts_pending": {},
+  "pending": {
+   "sources": [
+    "phynt_des",
+    "ext_wrench"
+   ],
+   "timeout_s": 2.0,
+   "goto_wall": 1794227609.0396006,
+   "ts_before_goto": {
+    "phynt_des": 1794227606.460741,
+    "ext_wrench": 1794227606.460741
+   },
+   "ready_wall": {
+    "phynt_des": 1794227609.053146,
+    "ext_wrench": 1794227609.053146
+   },
+   "ready_after_goto_s": {
+    "phynt_des": 0.01354527473449707,
+    "ext_wrench": 0.01354527473449707
+   }
+  },
+  "ft_stream": {
+   "n": 2193,
+   "waited_s": 0.051685333251953125,
+   "n_min": 50,
+   "timeout_s": 3.0,
+   "ok": true,
+   "logger_exit": null
+  },
+  "ft_live": {
+   "FREE1": {
+    "n": 2269,
+    "fx": {
+     "mean": 0.0010946756656161046,
+     "std": 0.03591032499009294
+    },
+    "fy": {
+     "mean": 0.0013087347988723216,
+     "std": 0.07521198148293655
+    },
+    "fz": {
+     "mean": -0.09809726427131152,
+     "std": 0.08221475550301463
+    },
+    "tx": {
+     "mean": 0.00016351462207248323,
+     "std": 0.009414216995939285
+    },
+    "ty": {
+     "mean": 0.029295339639490416,
+     "std": 0.03660442396344682
+    },
+    "tz": {
+     "mean": 0.0004215791501318147,
+     "std": 0.028303399005490528
+    },
+    "wall": [
+     1794227633.9709997,
+     1794227641.0364544
+    ]
+   },
+   "CONTACT": {
+    "n": 3225,
+    "fx": {
+     "mean": -0.6042733543488096,
+     "std": 2.9893960727421303
+    },
+    "fy": {
+     "mean": -0.05263196386089573,
+     "std": 0.8400977851921574
+    },
+    "fz": {
+     "mean": -0.21713616608915065,
+     "std": 0.7281687045342151
+    },
+    "tx": {
+     "mean": -0.006543530824258726,
+     "std": 0.10373971636458451
+    },
+    "ty": {
+     "mean": 0.18015173292946604,
+     "std": 0.6515431489080373
+    },
+    "tz": {
+     "mean": -0.03357414936053602,
+     "std": 0.5398449362369476
+    },
+    "wall": [
+     1794227651.041627,
+     1794227661.0396452
+    ]
+   },
+   "FREE2": {
+    "n": 2578,
+    "fx": {
+     "mean": 0.0007012405148564358,
+     "std": 0.038033416600075434
+    },
+    "fy": {
+     "mean": 0.00043793755991916844,
+     "std": 0.07289314330772231
+    },
+    "fz": {
+     "mean": -0.09799658184401477,
+     "std": 0.0826566875526743
+    },
+    "tx": {
+     "mean": 5.464963648705504e-05,
+     "std": 0.009125431660813355
+    },
+    "ty": {
+     "mean": 0.029302683230540586,
+     "std": 0.03708171906061395
+    },
+    "tz": {
+     "mean": 0.00012932263991297934,
+     "std": 0.027262133184528064
+    },
+    "wall": [
+     1794227667.0342455,
+     1794227675.0357754
+    ]
+   }
+  },
+  "safety_version": 2,
+  "initial_af": {
+   "ok": true,
+   "detail": {
+    "mass": true,
+    "K": true,
+    "B": true,
+    "J": true
+   },
+   "read": {
+    "ts": NaN,
+    "mass": 5.0,
+    "K": [
+     10.0,
+     100.0,
+     100.0,
+     50.0,
+     50.0,
+     50.0
+    ],
+    "B": [
+     14.142135623730951,
+     44.721359549995796,
+     44.721359549995796,
+     31.622776601683793,
+     31.622776601683793,
+     31.622776601683793
+    ],
+    "J": [
+     0.05,
+     0.0,
+     0.0,
+     0.0,
+     0.05,
+     0.0,
+     0.0,
+     0.0,
+     0.05
+    ]
+   }
+  }
+ },
+ "ft_logger": {
+  "cmd": [
+   "sh",
+   "/shared-workspace/noc/experiments/log_ft.sh",
+   "/shared-workspace/logs/noc/t04_ft_check/ft.log"
+  ],
+  "path": "/shared-workspace/logs/noc/t04_ft_check/ft.log",
+  "pid": 1122,
+  "started": 1794227600.310589,
+  "stream_check": {
+   "n": 2193,
+   "waited_s": 0.051685333251953125,
+   "n_min": 50,
+   "timeout_s": 3.0,
+   "ok": true,
+   "logger_exit": null
+  },
+  "alive_at_stop": true,
+  "returncode": -9,
+  "stopped": 1794227688.2001414,
+  "n_messages": 27868,
+  "n_bad": 0,
+  "bad_examples": []
+ },
+ "ft_logger_stderr_tail": "Terminated\n",
+ "model": {
+  "model": "noc-tilthex",
+  "ee_mass_kg": 0.01,
+  "ee_com_m": [
+   0.3,
+   0.0,
+   -0.125
+  ],
+  "joint": "ee_joint",
+  "joint_type": "fixed",
+  "parent": "base",
+  "child": "ee",
+  "sensor": "ee_ft",
+  "topic": "/noc/ee_ft",
+  "update_rate_hz": 500.0,
+  "frame": "child",
+  "measure_direction": "child_to_parent"
+ },
+ "ft_file": {
+  "n": 27868,
+  "n_bad": 0,
+  "bad_examples": [],
+  "n_comment": 1,
+  "trailing_partial": false,
+  "path": "logs/noc/t04_ft_check/ft.log"
+ },
+ "inventory": {
+  "events.json": {
+   "bytes": 2891,
+   "sha256": "c471668d3da057826e85fc3a0480065c63f4c6570bcdfc333ddd8b1408bcdec0"
+  },
+  "ft.log": {
+   "bytes": 9286591,
+   "sha256": "773b0bcc7e6912022a0d9ff01e679de37099524e4c6e60b6414e24818a4ccedf"
+  },
+  "maneuver.log": {
+   "bytes": 594922,
+   "sha256": "cb195a447dbe3ca7ca838da00aed4e52312e818f3b1f60c1e41aed743923aa43"
+  },
+  "meta.json": {
+   "bytes": 10873,
+   "sha256": "45b00538ccb4651ed692003f6210b0f5d724fd4f4437fdd8c28652294091cff1"
+  },
+  "opti.log": {
+   "bytes": 837627,
+   "sha256": "c433a3009455bd463c0265a0e7df4ed510fefa011f7b75cbc156ffd8ab58219f"
+  },
+  "phynt.log": {
+   "bytes": 10416586,
+   "sha256": "9386c88f5ca0a3890e8919741071abbc6cd040e073df3cd5f66165d99f9321e0"
+  },
+  "pom-measurements.log": {
+   "bytes": 11274635,
+   "sha256": "3e3845b3fd95c117065e099df5b0c87a7720719cd8fe8c061ac6b5dff3d7698d"
+  },
+  "pom.log": {
+   "bytes": 18507675,
+   "sha256": "bda0e959e73f0bf3c89abebf661228dd1f6d1bb015d5374bddcdfbdfa5460718"
+  },
+  "preflight.json": {
+   "bytes": 4403,
+   "sha256": "285ec5900b7ccdaf649aeb0ceea1c3d9a52a65ec1d4eeab4ccc4705777fdf9b0"
+  },
+  "rotorcraft.log": {
+   "bytes": 14150297,
+   "sha256": "394653497c095ee27686ee8f0863097189983248ea32f3b9e72dbb61081b03f0"
+  },
+  "snapshots.json": {
+   "bytes": 8789,
+   "sha256": "b73b0f3ca8edbd19d33f1bd8615c76fa0ec8f1f100486834666397321a183889"
+  },
+  "t04_ft_check.npz": {
+   "bytes": 4427708,
+   "sha256": "13eb0d52f3866539d5bd2ccd130cf1f2e9d6aad273d789b604af848dd07ba385"
+  },
+  "uavatt.log": {
+   "bytes": 11359789,
+   "sha256": "ba437b38429a0d80973cb2486ea41b13967f5c4d60536e90d77bfea180b08b8e"
+  },
+  "uavpos.log": {
+   "bytes": 15496127,
+   "sha256": "d63c48d11c4bfb2ecc2dbbd73593faaf2f2f62d5fcc1c3e5a6ab94d525613443"
+  }
+ },
+ "missing_logs": [],
+ "windows_wall": {
+  "FREE1": [
+   1794227633.9709997,
+   1794227641.0364544
+  ],
+  "CONTACT": [
+   1794227651.041627,
+   1794227661.0396452
+  ],
+  "FREE2": [
+   1794227667.0342455,
+   1794227675.0357754
+  ]
+ },
+ "flight_span_wall": [
+  1794227609.0396006,
+  1794227675.0343084
+ ],
+ "C1": {
+  "ft_messages": 27868,
+  "ft_bad_lines": 0,
+  "logger_alive_at_stop": true,
+  "abort": null,
+  "error": null,
+  "read_errors": 0,
+  "passed": true
+ },
+ "ft_windows_child": {
+  "FREE1": {
+   "n": 2253,
+   "fx": {
+    "mean": 0.0005575397928238579,
+    "std": 0.036258511627197634
+   },
+   "fy": {
+    "mean": 0.0012473828923065353,
+    "std": 0.07570335600400853
+   },
+   "fz": {
+    "mean": -0.09819177749176926,
+    "std": 0.08200970957866419
+   },
+   "tx": {
+    "mean": 0.0001560237236504799,
+    "std": 0.009476248795516484
+   },
+   "ty": {
+    "mean": 0.02939734176638231,
+    "std": 0.03660215810158448
+   },
+   "tz": {
+    "mean": 0.00038707981240092623,
+    "std": 0.028448774921016676
+   }
+  },
+  "CONTACT": {
+   "n": 3212,
+   "fx": {
+    "mean": -0.5640266386628362,
+    "std": 2.8162168200613555
+   },
+   "fy": {
+    "mean": -0.06105279018595209,
+    "std": 0.8145052553378153
+   },
+   "fz": {
+    "mean": -0.21991509436098886,
+    "std": 0.7361673123330057
+   },
+   "tx": {
+    "mean": -0.0075825876684424455,
+    "std": 0.10058841326462106
+   },
+   "ty": {
+    "mean": 0.17691477149376483,
+    "std": 0.6507115308106479
+   },
+   "tz": {
+    "mean": -0.03892646245909902,
+    "std": 0.5233856986075768
+   }
+  },
+  "FREE2": {
+   "n": 2586,
+   "fx": {
+    "mean": 0.0008539925634908094,
+    "std": 0.0384643674723818
+   },
+   "fy": {
+    "mean": 0.000488012156829611,
+    "std": 0.07255457174965997
+   },
+   "fz": {
+    "mean": -0.09767274646916442,
+    "std": 0.08328395597380736
+   },
+   "tx": {
+    "mean": 6.095203253468827e-05,
+    "std": 0.009083187269515661
+   },
+   "ty": {
+    "mean": 0.029193903736607015,
+    "std": 0.03738711309613527
+   },
+   "tz": {
+    "mean": 0.00014447037971383408,
+    "std": 0.027117401014325707
+   }
+  }
+ },
+ "Fn_windows": {
+  "FREE1": {
+   "n": 2253,
+   "mean": -0.00034365496712491475,
+   "std": 0.03713203439107303
+  },
+  "CONTACT": {
+   "n": 3212,
+   "mean": -0.5744897672373156,
+   "std": 2.825732207164258
+  },
+  "FREE2": {
+   "n": 2586,
+   "mean": 0.00044287799621363193,
+   "std": 0.038852083358971626
+  }
+ },
+ "comparison": {
+  "span_wall": [
+   1794227639.0355823,
+   1794227666.0342414
+  ],
+  "grid_hz": 100.0,
+  "lag_search_s": 1.0,
+  "ft_contact_mean_corrected_N": -0.5741461122701906,
+  "estimates": {
+   "WO efx": {
+    "lag_s": 0.89,
+    "corr": 0.08459876855457257,
+    "rmse_span_N": 2.1768713330473597,
+    "mean_err_span_N": 0.018115700230685844,
+    "rmse_contact_N": 2.1900775431288166,
+    "mean_err_contact_N": -0.03858400726292107,
+    "rmse_span_no_lag_N": 2.190123888293623,
+    "contact_mean_N": -0.6495646066102378
+   },
+   "-uavpos fx": {
+    "lag_s": -0.4,
+    "corr": 0.1245290429612325,
+    "rmse_span_N": 2.171998403642005,
+    "mean_err_span_N": 0.007791222218797968,
+    "rmse_contact_N": 2.1955677311021993,
+    "mean_err_contact_N": -0.008304961269398944,
+    "rmse_span_no_lag_N": 2.1947149263975585,
+    "contact_mean_N": -0.6080588462251656
+   }
+  }
+ },
+ "C2": {
+  "max_gap_s": 0.05,
+  "min_rate_hz": 100.0,
+  "passed": true,
+  "n": 22426,
+  "strictly_increasing": true,
+  "n_non_increasing": 0,
+  "max_gap": 0.0020000000000024443,
+  "rate_stamp_hz": 500.0,
+  "rate_host_hz": 339.82469457133357,
+  "rtf": 0.6796493891426671,
+  "host_minus_env_p99_ms": 650.3376960754395
+ },
+ "C3": {
+  "passed": true,
+  "n": 2253,
+  "bias": -0.00034365496712491475,
+  "free_std": 0.03713203439107303,
+  "tip_x_max": 1.8762732538908462,
+  "tip_limit": 1.95,
+  "min_samples": 500
+ },
+ "C4": {
+  "factor": 5.0,
+  "passed": true,
+  "contact_mean_corrected": -0.5741461122701906,
+  "free_std": 0.03713203439107303,
+  "ratio": 15.462285373952524,
+  "n": 3212,
+  "sign_as_expected": true
+ },
+ "C5": {
+  "ratio_min": 0.3333333333333333,
+  "ratio_max": 3.0,
+  "passed": true,
+  "delta_pre": -0.5741461122701906,
+  "delta_post": -0.5749326452335293,
+  "ratio": 0.9986319563346083,
+  "free2_mean": 0.00044287799621363193,
+  "bias_drift": 0.0007865329633385467
+ },
+ "C6": {
+  "safety_version": 2,
+  "safety_equal_flight_SAFETY": true,
+  "initial_af_ok": true,
+  "cycles": 3800,
+  "cycles_af_valid": 3800,
+  "cycles_af_match": 3800,
+  "n_af_set_calls": 0,
+  "abort": null,
+  "passed": true
+ },
+ "gate_B1": {
+  "C1": true,
+  "C2": true,
+  "C3": true,
+  "C4": true,
+  "C5": true,
+  "C6": true,
+  "passed": true
+ },
+ "criteria": {
+  "path": "noc/config/t04_ft_criteria.json",
+  "sha256": "5f50e0a5b70e031640eddd9188726ff1a5944a873e9ebe5b9c743e44fe354da9",
+  "committed": "18a443617812245a17bcb839926eeb2ce7e326a4 2026-11-04T23:28:33+01:00"
+ }
+}
