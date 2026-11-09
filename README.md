@@ -8,13 +8,17 @@
 end-effector is in contact with a wall. The starting point is lab assignment 6a (physical interaction:
 `phynt-genom3` admittance filter + wrench observer, Gazebo wall world).
 
-**Current status (2026-11-04): measurement and infrastructure phase.** The optimisation objective is not
-fixed yet. What exists today:
+**Current status (2026-11-09): base workspace closed; measurement and infrastructure phase finished.** The
+optimisation objective is not fixed yet. What exists today:
 
 - a diagnosis of the unmodified 6a pipeline (`noc/results/00b_diagnosis.md`);
 - a verified AF-on reference run, t01 (`noc/results/01_af_on.md`, config `noc/config/af_on_baseline.json`);
+- live `K_x` changes in flight, as steps (t02, `02_live_k.md`) and as ramps (t03, `03_k_ramp.md`);
+- a Gazebo F/T sensor on the end-effector joint (t04, `04_ft_check.md`) and the analysis of its impulsive
+  contact signal (`04b_impulse_origin.md`);
 - a reusable, tested flight path in `noc/` (setup fix, non-blocking goto, safety monitor, output-port
-  readers, log analysis).
+  readers, log analysis);
+- the verified inputs for the optimisation, with sources: `noc/results/README_summary.md`.
 
 No variable impedance controller exists yet. The original 6a work is kept unmodified in
 `src/06a-physical-interaction/`. Labs 1–5b were removed from the tree; they are in git history
@@ -35,8 +39,9 @@ for their design and implementation goes to the original authors and to the
 | `Kpxy`, `Kvxy` | `uavpos` position controller | 5, 7 | position / velocity gains; in steady contact `fx = −Kpxy·e_x − Kvxy·e_vx` (00b Q4) |
 | `K_x` | `phynt` admittance filter | 10 N/m | admittance stiffness in x (`af_K[0]`), with AF mass 5 kg and `B = 2·sqrt(m·K)` |
 
-All forces in this README are **estimates** (wrench observer output or the uavpos force command). There is
-no contact-force measurement in the simulation (no contact or F/T sensor).
+The wrench observer output and the uavpos force command are **estimates** from the control chain. The only
+contact-force measurement is the Gazebo F/T sensor on `ee_joint` (`noc-tilthex`, t04); see the
+[measurement rule](#measurement-rule-ölçüm-kuralı). Runs before t04 have no such sensor.
 
 ---
 
@@ -47,11 +52,12 @@ no contact-force measurement in the simulation (no contact or F/T sensor).
 3. [Requirements and container](#requirements-and-container)
 4. [Verified workflow: t01 (AF on)](#verified-workflow-t01-af-on)
 5. [Using 6a unmodified: known read problems and the noc path](#using-6a-unmodified-known-read-problems-and-the-noc-path)
-6. [Fixed issues](#fixed-issues)
-7. [Open issues](#open-issues)
-8. [Original 6a assignment](#original-6a-assignment)
-9. [Acknowledgments](#acknowledgments)
-10. [References](#references)
+6. [Measurement rule (Ölçüm kuralı)](#measurement-rule-ölçüm-kuralı)
+7. [Fixed issues](#fixed-issues)
+8. [Open issues](#open-issues)
+9. [Original 6a assignment](#original-6a-assignment)
+10. [Acknowledgments](#acknowledgments)
+11. [References](#references)
 
 ---
 
@@ -202,6 +208,25 @@ simulator seed is not recorded.
 
 ---
 
+## Measurement rule (Ölçüm kuralı)
+
+**Contact force** is the normal force from the F/T sensor (world-x component of the `ee_joint` force minus
+its free-flight bias), aligned on simulation time and filtered with a 0.5 s moving average. Raw F/T is used
+for diagnosis only.
+
+*Why.* DART solves the wall as a rigid contact, so the instantaneous F/T signal is impulsive: in steady
+contact the median is ≈ 0, pulses last 1–2 physics steps and reach −50 N (`04b_impulse_origin.md`). The mean
+agrees with the series model: t04 F/T **0.616 N** [measured], prediction **0.613 N** [computed].
+
+*How far this is supported.* One flight, one operating point (`K_x` = 10, `d0` = 0.184 m). The 95 % CI of
+that mean is 0.540–0.697 N, so agreement is resolved only to about ±13 %. The 0.616 N uses the post-hoc
+0.1 s envelope for sim-time alignment; the 2 s envelope pre-registered for gate B1 places F/T ≈ 0.5 s early
+at RTF 0.64 and gives 0.574 N (`04_ft_check.md` §2, §4). Use the 0.1 s envelope
+(`noc/analysis/a04b_ft_supplement.py`). The 0.5 s filter does not change the window mean; after it, the
+RMSE against `-uavpos fx` in contact is still 0.22 N (`04_ft_check.md` §3.3).
+
+---
+
 ## Fixed issues
 
 Only fixes that are applied in `noc/` and verified on a run are listed. `src/06a` is not modified.
@@ -245,31 +270,71 @@ Only fixes that are applied in `noc/` and verified on a run are listed. `src/06a
   hold the t00_probe run. Preserved: the derived metrics (`metrics.json`), plots and the inventory with
   sizes, row counts and sha256 of the lost files. `~/tk3lab-ws` was not searched.
 
+**5. No contact-force measurement.**
+- *Problem:* up to t03 every contact force was an estimate from the control chain.
+- *Fix:* `gazebo/models/noc-tilthex` + `gazebo/worlds/noc-wall-world.world` (copies; the tip moved to an `ee`
+  link on a fixed `ee_joint` with a 500 Hz force_torque sensor), recorded by `noc/experiments/log_ft.sh`.
+- *Evidence (t04, `04_ft_check.md`):* gate B1 PASSED on pre-registered criteria; ground check |F| = 0.0982 N
+  vs m_ee·g = 0.0981 N; 27 868 messages, 0 bad, largest stamp gap 2 ms.
+
+**6. `K_x` step causes a force-command jump.**
+- *Problem:* 4 of 5 live steps in t02 set the jump flag (|Δfx| up to 0.143 N, synchronous with the call).
+  Gate A stays **FAILED** by its definition; the criterion was not changed afterwards.
+- *Cause:* the AF state stays continuous, but its acceleration output jumps by ΔK·dev/M_af and uavpos
+  feeds it forward (`02_live_k.md` §2).
+- *Fix:* change `K_x` as a ramp, one call per 50 Hz cycle (`noc/tests/t03_k_ramp.py`).
+- *Evidence (t03, `03_k_ramp.md`):* gate A2 PASSED; per-call |Δfx| median 0.0053 N, max 0.034 N.
+
+**7. False "failed" preflight before the first goto.**
+- *Problem:* `phynt/external_wrench` raised `S_posterLib_EMPTY_POSTER` in the t02 check.
+- *Cause:* phynt does not update these ports before the first valid reference (`02_live_k.md` §1).
+- *Fix:* `phynt_des` and `ext_wrench` are "pending" until the first goto (`noc/tests/t03_k_ramp.py`).
+- *Evidence:* t03: both ready 13.5 ms after the first goto, 0 read errors. t04: 0 read errors.
+
+**8. Safety monitor v1 tripped on ground contact at landing (t01).**
+- *Fix:* safety v2, external-wrench check only while flying (z > 0.5 m), `noc/common/flight.py`.
+- *Evidence:* t02, t03 and t04 flew through landing on v2 with no trip (`abort` null).
+
+**9. Wall stiffness hypothesis resolved.**
+- *Finding (`04b_impulse_origin.md` §5):* the engine is DART (gz-sim 9.5.0 default; DART 6.13.2). The DART
+  plugin never reads `<ode><kp>/<kd>/<min_depth>/<max_vel>` (exact-version source and installed binary).
+  Seen in the data: at most 0.13 mm penetration, where 500 N/m would need ≥ 1.2 mm at 0.6 N.
+  `params.K_WALL` and `D_WALL` are therefore not applied in this simulation.
+- *Limit:* no log records which plugin was loaded in that run.
+
 ---
 
 ## Open issues
 
-- **Contact force is an estimate, not a measurement.** Steady contact in t01: uavpos force command
-  `fx` 0.622 N, WO `f_ext,x` −0.606 N. Both come from the same control chain and are not independent.
-  Measuring it needs a Gazebo contact or F/T sensor (the SDF has a "contact sensor" comment but no `<sensor>`).
-- **Lab requirement |Fx| ≥ 2 N is not met** (≈ 0.62 N estimated). The 2 N figure in the original 6a
-  write-up assumed a 500 N/m wall spring.
-- **Wall stiffness: hypothesis, not verified.** The world sets ODE `<kp>500</kp>`, but `<physics
-  type='unused'>` is started with `gz sim`; the default engine may ignore the ODE contact parameters.
-  The 6a baseline data give an effective wall stiffness ≥ ~1.1·10⁴ N/m under stated assumptions
-  (`00_baseline.md`); `params.K_WALL = 500` remains marked ASSUMPTION.
-- **Safety monitor v2 not flight-tested.** The external-wrench check is now active only while flying
-  (z > 0.5 m), because t01 (safety v1) tripped at landing on ground contact (WO |f| = 3.54 N, z = 0.237 m).
-  v2 is covered by a unit test only.
+- **Contact is impulsive (rigid DART contact).** In steady contact, pulses are irregular (≈ 29 Hz), mostly
+  1–2 physics steps long, and the tip leaves the wall by up to 2.3 mm (opti). First impact in t04: −350 N.
+  **Decision (2026-11-09):** treated as simulator-origin on the basis of 04b, no passive spring is added,
+  and t06 is not flown. No control-variant flight tested this attribution; 04b itself leaves it open.
+- **Lab requirement |Fx| ≥ 2 N is not met** (0.616 N F/T in t04). The 2 N figure in the original 6a
+  write-up assumed a 500 N/m wall spring, which is not applied (fixed issue 9). The series model bounds the
+  force at 0.92 N for the current `d0` and `Kpxy`; see `noc/results/README_summary.md`.
+- **Series model checked against F/T at one point only** (`K_x` = 10, t04). For `K_x` = 10–20 it is
+  compared only with the uavpos command (error −6.5 % to −0.4 %, t02/t03). `Kpxy` was never varied.
+- **Estimates vs F/T.** In t04 contact, WO `efx` and `-uavpos fx` agree with the F/T mean within about
+  ±0.08 N (bias indistinguishable from zero). Their lag behind F/T could not be determined (`04_ft_check.md` §3.2).
+- **WO and `fx` disagree by 0.0–0.1 N, varying from hold to hold** (t02, t03). AF deviation follows the WO
+  estimate, not `fx`.
+- **Sim-time alignment is not in `a04_ft_check.py`.** Its pre-registered 2 s envelope stays as committed;
+  the 0.1 s envelope lives in `a04b_ft_supplement.py` and `a04c_impulse_origin.py`.
+- **Settling time not determined reliably.** Noise and slow drifts mask it: `K_x` steps 1.9–2.5 s (t02),
+  ramps 1.02 s and ≥ 9.96 s censored (t03); one sample per transition type.
+- **Fixed `B`.** `K_x` changes keep B = 14.14 N·s/m, so ζ falls from 1.0 to 0.71 at `K_x` = 20 (computed).
+- **Simulation slower than real time.** RTF 0.68 over the t04 flight (0.645 in contact). Control runs on the
+  wall clock and the plant on sim time, so wall-clock speeds are about 1/RTF larger in sim time.
+- **`fx` noise higher in t03 than t02**, cause not determined (`03_k_ramp.md` H1).
 - **`phynt.log` misses 7.5 % of records** (`log_info` miss 4 832 / 64 113 in t01).
-- **Steady contact windows are short.** 1.9–3.5 s against an AF settling time of ≈ 4.1 s; the measured
-  deviation (−55 mm) is 6–8 mm below the series-model prediction (61–63 mm).
 - **Static-phase reference `pos` is None** (00b E2) in `maneuver.desired` / phynt reference; the AF output
   `phynt.desired` still carries pos and vel. Mechanism not verified.
-- **Gains not explored.** Kvxy sweep not done (model inference: Kvxy contributes ≈ 0.02 N statically and
-  does not set static stiffness). Live test of the admittance stiffness K_x is the next step.
+- **Gains not explored.** Kvxy and `Kpxy` sweeps not done (model inference: Kvxy contributes ≈ 0.02 N statically
+  and does not set static stiffness). `K_x` tested only in 10–20 N/m, ramps only at 10 N/m/s.
 - **Model inconsistencies** (`CLAUDE.md`): rotor tilt mapping (SDF ≈ 20° vs `rx = −21.2°, ry = −18.7°`)
-  unverified; inertia is base-link only; `plot_06a.py` EE kinematics ignore the tip z offset.
+  unverified; inertia is base-link only; `plot_06a.py` EE kinematics ignore the tip z offset; `noc-tilthex` is
+  2.73 kg while uavpos uses 2.72 kg.
 - **6a read functions** (table above) are not fixed in 6a itself; use the noc path.
 
 ---
