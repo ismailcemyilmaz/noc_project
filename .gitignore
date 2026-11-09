@@ -2,3 +2,6 @@
 logs/
 __pycache__/
 *.pyc
+.bashrc_ismail-cem-yilmaz
+noc/docs/
+noc/results/06a_baseline/
