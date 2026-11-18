@@ -48,7 +48,7 @@ sed -i 's#TK3WS_DIR="${HOME}/tk3lab-ws"#TK3WS_DIR="${HOME}/noc-ws"#' tk3lab-run-
 sh tk3lab-run-noc -g ionic -v 0.2
 ```
 
-Open the noVNC desktop at <http://localhost:6080>.
+Open the noVNC desktop at <http://127.0.0.1:6080>.
 
 Host environment and unit tests (no Docker needed):
 
